@@ -1,85 +1,244 @@
 "use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { Lock, User, ArrowRight } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
+import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { FileText, Loader2, Download, Users, Banknote, Globe, Wallet } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 
-export default function LoginPage() {
-  const router = useRouter();
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
+// --- CONFIG ---
+const MARKUP_PERCENT = 0.20; // 20% Markup
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
+const BRAND = {
+  primary: '#3a0519',
+  secondary: '#a77a0b',
+  accent: '#fdf8e8',
+};
 
-    // Simulasi Cek Password Sederhana
-    // Nanti bisa diganti dengan Database check
-    if (username === 'admin' && password === 'rehla123') {
-      // Set Cookie 'auth_token' agar middleware tahu kita sudah login
-      document.cookie = "auth_token=true; path=/";
-      
-      toast.success("Login Berhasil! Mengalihkan...");
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 1000);
-    } else {
-      toast.error("Username atau Password salah!");
-      setLoading(false);
+// --- PDF ENGINE ---
+const styles = StyleSheet.create({
+  page: { padding: 40, fontFamily: 'Helvetica', fontSize: 12, color:'#333' },
+  header: { marginBottom: 20, borderBottom: `2px solid ${BRAND.secondary}`, paddingBottom: 10, flexDirection:'row', justifyContent:'space-between', alignItems:'flex-end' },
+  title: { fontSize: 24, color: BRAND.primary, fontWeight: 'bold', textTransform: 'uppercase' },
+  subTitle: { fontSize: 10, color: '#666' },
+  ref: { fontSize: 10, color: '#888', marginTop:4 },
+  section: { marginBottom: 15, padding: 12, backgroundColor: '#f9fafb', border: '1px solid #eee', borderRadius: 4 },
+  sectionTitle: { fontSize: 10, fontWeight: 'bold', color: BRAND.primary, marginBottom: 8, textTransform:'uppercase', borderBottom:'1px dashed #ddd', paddingBottom:4 },
+  row: { flexDirection: 'row', marginBottom: 6 },
+  label: { width: '40%', fontSize: 10, color: '#666' },
+  value: { width: '60%', fontSize: 10, fontWeight: 'bold' },
+  totalBox: { marginTop: 20, padding: 15, backgroundColor: BRAND.accent, borderRadius: 6, border: `1px solid ${BRAND.secondary}` },
+  totalRow: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 5 },
+  grandTotal: { fontSize: 16, fontWeight: 'bold', color: BRAND.primary, textAlign: 'right', marginTop: 10, borderTop: '1px solid #ddd', paddingTop: 5 },
+  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, textAlign: 'center', fontSize: 9, color: '#aaa', borderTop: '1px solid #eee', paddingTop: 10 }
+});
+
+const VisaPdfDoc = ({ data }: { data: any }) => {
+  const total = (data.price || 0) * (data.paxQuantity || 1);
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        <View style={styles.header}>
+          <View><Text style={styles.title}>VISA QUOTATION</Text><Text style={styles.subTitle}>Travel Rehla System</Text></View>
+          <Text style={styles.ref}>Ref: {data.refNumber}</Text>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Informasi Pelanggan</Text>
+          <View style={styles.row}><Text style={styles.label}>Nama Jemaah</Text><Text style={styles.value}>{data.customerName}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Paspor</Text><Text style={styles.value}>{data.passportNo || '-'}</Text></View>
+        </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Spesifikasi Visa</Text>
+          <View style={styles.row}><Text style={styles.label}>Jenis Visa</Text><Text style={styles.value}>{data.visaType}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Entry</Text><Text style={styles.value}>{data.entryType}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Provider</Text><Text style={styles.value}>{data.provider || '-'}</Text></View>
+          <View style={styles.row}><Text style={styles.label}>Durasi</Text><Text style={styles.value}>{data.duration} Hari</Text></View>
+        </View>
+        <View style={styles.totalBox}>
+          <View style={styles.totalRow}><Text style={{fontSize:10}}>Harga</Text><Text style={{fontSize:10, fontWeight:'bold'}}>{data.currency} {(data.price || 0).toLocaleString('id-ID')}</Text></View>
+          <View style={styles.totalRow}><Text style={{fontSize:10}}>Pax</Text><Text style={{fontSize:10, fontWeight:'bold'}}>x {data.paxQuantity || 1}</Text></View>
+          <Text style={styles.grandTotal}>TOTAL: {data.currency} {total.toLocaleString('id-ID')}</Text>
+        </View>
+        <Text style={styles.footer}>Generated by Travel Rehla System</Text>
+      </Page>
+    </Document>
+  );
+};
+
+// --- MAIN PAGE ---
+export default function VisaGeneratorPage() {
+  const [isGenerating, setIsGenerating] = useState(false);
+  
+  // RATES DEFAULT (Supaya langsung muncul)
+  const [rates, setRates] = useState({ SAR: 4350, USD: 16300 }); 
+  const [isLive, setIsLive] = useState(false);
+
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const res = await fetch('https://api.exchangerate-api.com/v4/latest/USD');
+        const data = await res.json();
+        if(data?.rates) {
+          setRates({
+            USD: Math.ceil(data.rates.IDR),
+            SAR: Math.ceil(data.rates.IDR / data.rates.SAR)
+          });
+          setIsLive(true);
+        }
+      } catch (e) { console.error("Rate error"); }
+    };
+    fetchRates();
+  }, []);
+
+  const { register, control, watch } = useForm({
+    defaultValues: {
+      refNumber: `V-${Date.now().toString().slice(-6)}`,
+      customerName: '', passportNo: '', 
+      visaType: 'Umrah Reguler', entryType: 'Single Entry', provider: '',
+      duration: '90', processingTime: '3-5 Hari Kerja',
+      paxQuantity: 1, price: 0, currency: 'IDR'
     }
+  });
+
+  const w = useWatch({ control });
+  const currency = w.currency || 'IDR';
+  const total = (w.price || 0) * (w.paxQuantity || 1);
+
+  let rateUsed = 1;
+  if (currency === 'USD') rateUsed = rates.USD;
+  if (currency === 'SAR') rateUsed = rates.SAR;
+  const convertedIDR = total * rateUsed * (1 + MARKUP_PERCENT);
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await pdf(<VisaPdfDoc data={w} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = `Visa.pdf`; link.click();
+      toast.success("PDF Siap!");
+    } catch(e) { toast.error("Gagal PDF"); }
+    finally { setIsGenerating(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100 font-sans p-4">
-      <Toaster position="top-center" />
-      
-      <div className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md border-t-4" style={{ borderColor: '#a77a0b' }}>
-        <div className="text-center mb-8">
-            <img src="/rehlasticky.png" className="w-20 h-20 mx-auto object-contain mb-4" />
-            <h1 className="text-2xl font-bold text-gray-800">Travel Rehla System</h1>
-            <p className="text-sm text-gray-500">Silakan login untuk akses dashboard</p>
+    <div className="p-6 md:p-8 max-w-7xl mx-auto font-sans text-slate-800">
+      <Toaster position="top-center" richColors />
+
+      {/* HEADER UTAMA + RATES (Kanan Atas) */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b pb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#3a0519] flex gap-2 items-center"><FileText className="text-[#a77a0b]"/> Visa Quotation</h1>
+          <p className="text-sm text-gray-500">Buat penawaran visa Umrah/Turis.</p>
+        </div>
+        
+        {/* INI KOTAK RATES YANG BOS CARI */}
+        <div className="flex gap-3">
+             <div className="bg-white border border-gray-300 px-4 py-2 rounded-lg shadow-sm text-right min-w-[110px]">
+                <p className="text-[10px] text-gray-400 font-bold tracking-wider flex items-center justify-end gap-1">
+                   SAR (XE) {isLive && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>}
+                </p>
+                <p className="text-sm font-bold text-slate-800">Rp {rates.SAR.toLocaleString()}</p>
+            </div>
+            <div className="bg-white border border-gray-300 px-4 py-2 rounded-lg shadow-sm text-right min-w-[110px]">
+                <p className="text-[10px] text-gray-400 font-bold tracking-wider flex items-center justify-end gap-1">
+                   USD (XE) {isLive && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>}
+                </p>
+                <p className="text-sm font-bold text-slate-800">Rp {rates.USD.toLocaleString()}</p>
+            </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-6">
+            {/* Form Input Sederhana */}
+            <div className="bg-white p-6 rounded-xl border border-t-4 shadow-sm" style={{borderTopColor: BRAND.secondary}}>
+                <h3 className="font-bold text-[#3a0519] mb-4 flex gap-2"><Users size={18}/> Informasi</h3>
+                <div className="grid grid-cols-2 gap-4">
+                    <input {...register('customerName')} className="input-field" placeholder="Nama Jemaah"/>
+                    <input {...register('passportNo')} className="input-field" placeholder="No Paspor"/>
+                </div>
+            </div>
+            
+            <div className="bg-white p-6 rounded-xl border border-t-4 shadow-sm" style={{borderTopColor: BRAND.secondary}}>
+                <h3 className="font-bold text-[#3a0519] mb-4 flex gap-2"><Globe size={18}/> Visa Detail</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <select {...register('visaType')} className="input-field"><option>Umrah Reguler</option><option>Umrah Plus</option></select>
+                    <input {...register('provider')} className="input-field" placeholder="Provider"/>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <select {...register('entryType')} className="input-field"><option>Single Entry</option><option>Multiple Entry</option></select>
+                    <input {...register('duration')} className="input-field" placeholder="90"/>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-t-4 shadow-sm" style={{borderTopColor: BRAND.secondary}}>
+                <div className="flex justify-between items-center mb-4">
+                    <h3 className="font-bold text-[#3a0519] flex gap-2"><Banknote size={18}/> Harga</h3>
+                    <select {...register('currency')} className="bg-gray-100 p-2 rounded border font-bold text-[#3a0519] cursor-pointer">
+                        <option value="IDR">IDR (Rupiah)</option>
+                        <option value="USD">USD (Dollar)</option>
+                        <option value="SAR">SAR (Riyal)</option>
+                    </select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <input type="number" {...register('paxQuantity', {valueAsNumber:true})} className="input-field" placeholder="Pax"/>
+                    <input type="number" {...register('price', {valueAsNumber:true})} className="input-field" placeholder="Harga"/>
+                </div>
+            </div>
         </div>
 
-        <form onSubmit={handleLogin} className="space-y-4">
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Username</label>
-                <div className="relative">
-                    <User className="absolute left-3 top-3 text-gray-400" size={18} />
-                    <input 
-                        type="text" 
-                        className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a77a0b]"
-                        placeholder="Masukkan username"
-                        value={username}
-                        onChange={(e) => setUsername(e.target.value)}
-                    />
-                </div>
-            </div>
-            <div>
-                <label className="block text-xs font-bold text-gray-500 uppercase mb-1">Password</label>
-                <div className="relative">
-                    <Lock className="absolute left-3 top-3 text-gray-400" size={18} />
-                    <input 
-                        type="password" 
-                        className="w-full pl-10 p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-[#a77a0b]"
-                        placeholder="••••••••"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                    />
-                </div>
-            </div>
+        {/* KANAN: LIVE PREVIEW */}
+        <div className="lg:col-span-4">
+            <div className="sticky top-6 space-y-6">
+                
+                {/* KOTAK KUNING: LIVE ESTIMATE */}
+                <div className="bg-yellow-50 border border-yellow-200 p-6 rounded-xl shadow-sm relative overflow-hidden">
+                    <div className="absolute top-0 right-0 p-2 opacity-10"><Banknote size={60} className="text-yellow-600"/></div>
+                    
+                    <h3 className="text-[#a77a0b] font-bold text-lg mb-4 flex items-center gap-2"><Wallet size={20}/> Live Estimate</h3>
+                    
+                    <div className="space-y-3 mb-6 relative z-10">
+                        <div className="flex justify-between text-sm text-gray-600">
+                            <span>Harga:</span><span className="font-mono">{currency} {(w.price||0).toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-gray-600 border-b border-yellow-200 pb-2">
+                            <span>Pax:</span><span>x {w.paxQuantity||1}</span>
+                        </div>
+                        <div className="pt-2">
+                            <span className="block text-xs font-bold text-gray-500 uppercase mb-1">TOTAL ({currency})</span>
+                            <span className="text-3xl font-bold text-[#3a0519]">{currency} {total.toLocaleString('id-ID')}</span>
+                        </div>
+                    </div>
 
-            <button 
-                type="submit" 
-                disabled={loading}
-                className="w-full py-3 bg-[#3a0519] text-white rounded-lg font-bold hover:opacity-90 transition flex justify-center items-center gap-2"
-            >
-                {loading ? 'Memproses...' : <>Masuk Dashboard <ArrowRight size={18}/></>}
-            </button>
-        </form>
-        <p className="text-center text-xs text-gray-400 mt-6">&copy; 2026 Travel Rehla Internal System</p>
+                    {/* INI KOTAK ESTIMASI RUPIAH YANG BOS CARI */}
+                    {currency !== 'IDR' ? (
+                        <div className="bg-white p-4 rounded-lg border-2 border-dashed border-yellow-300 animate-in zoom-in-95 duration-300">
+                            <p className="text-[10px] font-bold text-[#a77a0b] uppercase tracking-wide mb-1">
+                                ESTIMASI RUPIAH (+20%)
+                            </p>
+                            <p className="text-xl font-bold text-slate-800">
+                                Rp {convertedIDR.toLocaleString('id-ID', {maximumFractionDigits:0})}
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="text-center p-3 bg-white/50 rounded border border-dashed border-yellow-200 text-xs text-gray-400 italic">
+                            Ubah ke USD/SAR utk lihat Rupiah.
+                        </div>
+                    )}
+                </div>
+
+                <div className="bg-white p-6 rounded-xl border shadow-sm text-center">
+                    <button onClick={handleDownload} disabled={isGenerating} className="w-full bg-[#3a0519] hover:bg-[#5a0826] text-white font-bold py-3 rounded-lg flex justify-center items-center gap-2">
+                        {isGenerating ? <Loader2 className="animate-spin"/> : <Download size={20}/>} Download
+                    </button>
+                </div>
+            </div>
+        </div>
       </div>
+      <style jsx global>{`
+        .input-field { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; outline: none; background: #fff; }
+        .input-field:focus { border-color: ${BRAND.secondary}; ring: 2px; ring-color: #fdf8e8; }
+      `}</style>
     </div>
   );
 }

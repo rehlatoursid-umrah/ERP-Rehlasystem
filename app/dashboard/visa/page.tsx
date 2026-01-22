@@ -3,441 +3,424 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, useWatch, useFieldArray } from 'react-hook-form';
 import { Document, Page, Text, View, StyleSheet, pdf, Image as PdfImage } from '@react-pdf/renderer';
-import { FileText, CreditCard, CheckCircle, AlignLeft, ListChecks, Plus, Trash2, Users, Send, Loader2 } from 'lucide-react';
-import { Toaster, toast } from 'sonner'; // <-- Import ini sekarang akan berhasil setelah npm install
+import { FileText, Loader2, Download, Users, Banknote, Globe, Calculator, User, Info, Plus, Trash2, Send, ClipboardList } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 
-// --- 1. CONFIG WARNA BRANDING ---
+// --- 1. CONFIG & CONSTANTS ---
+const MARKUP_PERCENT = 0.20; // Markup 20%
+
 const BRAND = {
-  primary: '#3a0519',   
-  secondary: '#a77a0b', 
-  accent: '#fdf8e8',    
+  primary: '#3a0519',
+  secondary: '#a77a0b',
+  accent: '#fdf8e8',
 };
 
-// --- 2. TIPE DATA ---
-type Customer = {
-  name: string;
-  passport: string;
-};
+// --- 2. PDF ENGINE ---
+const styles = StyleSheet.create({
+  page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color:'#333' },
+  
+  // HEADER (LAYOUT BARU DENGAN LOGO)
+  header: { 
+    flexDirection: 'row', 
+    justifyContent: 'space-between', 
+    marginBottom: 25, 
+    borderBottom: `2px solid ${BRAND.secondary}`, 
+    paddingBottom: 15,
+    alignItems: 'center' 
+  },
+  
+  // BAGIAN KIRI (LOGO + TEKS)
+  headerLeftContainer: { 
+    flexDirection: 'row', 
+    alignItems: 'center' 
+  },
+  logo: { 
+    width: 60, 
+    height: 60, 
+    marginRight: 12,
+    objectFit: 'contain' 
+  },
+  headerInfo: { 
+    flexDirection: 'column' 
+  },
+  
+  // BAGIAN KANAN (JUDUL)
+  headerRight: { 
+    alignItems: 'flex-end', 
+    justifyContent: 'flex-end',
+    height: 60, // Menyamakan tinggi dengan logo biar sejajar
+    paddingTop: 10
+  },
 
-type VisaFormValues = {
-  customers: Customer[];
-  customerWhatsapp: string;
-  visaType: string;
-  provider: string;
-  entryType: string;
-  duration: number;
-  processingTime: string;
-  currency: string;
-  pax: number;
-  pricePerPax: number;
-  checklist: string;
-  notes: string;
-};
-
-// --- 3. TEMPLATE PDF ---
-const pdfStyles = StyleSheet.create({
-  page: { padding: 40, fontFamily: 'Helvetica', fontSize: 10, color: '#333' },
-  headerContainer: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20, borderBottom: `1px solid ${BRAND.secondary}`, paddingBottom: 15 },
-  companyGroup: { flexDirection: 'row', alignItems: 'center' },
-  logoImage: { width: 45, height: 45, marginRight: 10, objectFit: 'contain' },
-  companyInfo: { flexDirection: 'column' },
   companyName: { fontSize: 18, fontWeight: 'bold', color: BRAND.primary, marginBottom: 4 },
-  companyDetail: { fontSize: 9, color: '#666', marginBottom: 2 },
-  docTitleContainer: { alignItems: 'flex-end', justifyContent: 'center', marginTop: 5 },
-  docTitle: { fontSize: 16, fontWeight: 'bold', color: BRAND.primary },
-  docRef: { fontSize: 9, color: '#888', marginTop: 2 },
-  infoGrid: { flexDirection: 'row', gap: 20, marginBottom: 20 },
-  infoColumn: { flex: 1, backgroundColor: '#f9fafb', padding: 10, borderRadius: 4 },
-  sectionTitle: { fontSize: 9, fontWeight: 'bold', color: BRAND.secondary, marginBottom: 8, textTransform: 'uppercase' },
-  row: { marginBottom: 6 },
-  label: { fontSize: 8, color: '#666', marginBottom: 1 },
-  value: { fontSize: 10, fontWeight: 'bold', color: '#000' },
-  customerItem: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 2, borderBottom: '1px dashed #eee', paddingBottom: 2 },
-  customerName: { fontSize: 9, fontWeight: 'bold', color: '#333' },
-  customerPass: { fontSize: 9, color: '#666' },
-  table: { marginTop: 10, marginBottom: 20 },
-  tableHeader: { flexDirection: 'row', backgroundColor: BRAND.primary, padding: 8, borderRadius: 2 },
-  tableRow: { flexDirection: 'row', padding: 10, borderBottom: '1px solid #eee' },
-  th: { fontSize: 9, fontWeight: 'bold', color: '#fff' },
+  companySub: { fontSize: 9, color: '#555' },
+  docTitle: { fontSize: 16, fontWeight: 'bold', color: BRAND.primary, textTransform: 'uppercase' },
+  docRef: { fontSize: 9, color: '#888', marginTop: 4 },
+
+  // SECTION STYLES
+  sectionHeader: { fontSize: 11, fontWeight: 'bold', color: BRAND.primary, marginTop: 15, marginBottom: 8, textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: 4 },
+  jemaahRow: { flexDirection: 'row', paddingVertical: 4, borderBottom: '1px dashed #eee' },
+  colNo: { width: '5%', fontSize: 9 },
+  colName: { width: '55%', fontSize: 9, fontWeight: 'bold' },
+  colPass: { width: '40%', fontSize: 9, color: '#555' },
+  specContainer: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 10 },
+  specItem: { width: '33%', marginBottom: 8 },
+  specLabel: { fontSize: 8, color: '#888', marginBottom: 2 },
+  specValue: { fontSize: 10, fontWeight: 'bold' },
+  table: { marginTop: 10, border: '1px solid #eee', borderRadius: 4 },
+  tableHeader: { flexDirection: 'row', backgroundColor: '#f8f9fa', padding: 8, borderBottom: '1px solid #ddd' },
+  tableRow: { flexDirection: 'row', padding: 8, borderBottom: '1px solid #eee' },
+  th: { fontSize: 9, fontWeight: 'bold', color: '#555' },
   td: { fontSize: 9, color: '#333' },
-  tdDesc: { fontSize: 9, fontWeight: 'bold', color: '#333', marginBottom: 2 },
-  tdSub: { fontSize: 8, color: '#666' },
-  colDesc: { flex: 3 },
-  colPax: { flex: 1, textAlign: 'center' },
-  colPrice: { flex: 1.5, textAlign: 'right' },
-  totalContainer: { flexDirection: 'row', justifyContent: 'flex-end', marginTop: 5 },
-  totalBox: { width: '45%', backgroundColor: BRAND.accent, padding: 10, borderRadius: 4, borderLeft: `3px solid ${BRAND.secondary}` },
-  totalLabel: { fontSize: 9, color: BRAND.primary, marginBottom: 2, textAlign: 'right' },
-  totalValue: { fontSize: 14, fontWeight: 'bold', color: BRAND.secondary, textAlign: 'right' },
-  notesSection: { marginTop: 20, borderTop: '1px dashed #ddd', paddingTop: 10 },
-  notesLabel: { fontSize: 9, fontWeight: 'bold', marginBottom: 4, color: BRAND.primary },
-  notesContent: { fontSize: 9, color: '#555', lineHeight: 1.4 },
-  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, fontSize: 8, color: '#aaa', textAlign: 'center' }
+  colDesc: { width: '60%' },
+  colPax: { width: '15%', textAlign: 'center' },
+  colPrice: { width: '25%', textAlign: 'right' },
+  totalSection: { marginTop: 15, alignItems: 'flex-end' },
+  totalBox: { width: '40%', padding: 10, backgroundColor: BRAND.accent, border: `1px solid ${BRAND.secondary}`, borderRadius: 4 },
+  grandTotalLabel: { fontSize: 9, color: '#666', textAlign: 'right' },
+  grandTotalValue: { fontSize: 14, fontWeight: 'bold', color: BRAND.primary, textAlign: 'right', marginTop: 2 },
+  estBox: { marginTop: 4, paddingTop: 4, borderTop: '1px dashed #ccc' },
+  estLabel: { fontSize: 8, color: '#888', textAlign: 'right', fontStyle: 'italic' },
+  estValue: { fontSize: 10, fontWeight: 'bold', color: '#555', textAlign: 'right' },
+  checklistSection: { marginTop: 20, padding: 10, backgroundColor: '#f9fafb', borderRadius: 4 },
+  checklistItem: { fontSize: 9, color: '#555', marginBottom: 3, lineHeight: 1.4 },
+  notes: { fontSize: 9, color: '#555', marginTop: 2, lineHeight: 1.4, fontStyle: 'italic' },
+  footer: { position: 'absolute', bottom: 30, left: 40, right: 40, textAlign: 'center', fontSize: 8, color: '#aaa', borderTop: '1px solid #eee', paddingTop: 10 }
 });
 
-const VisaPdfDocument = ({ data }: { data: VisaFormValues }) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      <View style={pdfStyles.headerContainer}>
-        <View style={pdfStyles.companyGroup}>
-            <PdfImage src="/rehlasticky.png" style={pdfStyles.logoImage} />
-            <View style={pdfStyles.companyInfo}>
-                <Text style={pdfStyles.companyName}>TRAVEL REHLA</Text>
-                <Text style={pdfStyles.companyDetail}>PPIU SK No. 123/2026</Text>
-                <Text style={pdfStyles.companyDetail}>Jl. Menuju Baitullah No. 1, Jakarta</Text>
-            </View>
-        </View>
-        <View style={pdfStyles.docTitleContainer}>
-            <Text style={pdfStyles.docTitle}>QUOTATION VISA</Text>
-            <Text style={pdfStyles.docRef}>Ref: Q-VIS-{new Date().getTime().toString().slice(-6)}</Text>
-        </View>
-      </View>
+const VisaPdfDoc = ({ data }: { data: any }) => {
+  const total = (data.price || 0) * (data.paxQuantity || 1);
+  const customers = data.customers || [];
+  const showIdrEstimate = data.currency !== 'IDR' && data.convertedIDR > 0;
 
-      <View style={pdfStyles.infoGrid}>
-        <View style={pdfStyles.infoColumn}>
-            <Text style={pdfStyles.sectionTitle}>Daftar Jemaah</Text>
-            {data.customers.map((cust, index) => (
-                <View key={index} style={pdfStyles.customerItem}>
-                    <Text style={pdfStyles.customerName}>{index + 1}. {cust.name || "Tanpa Nama"}</Text>
-                    <Text style={pdfStyles.customerPass}>{cust.passport || "-"}</Text>
+  return (
+    <Document>
+      <Page size="A4" style={styles.page}>
+        
+        {/* HEADER DENGAN LOGO PRESISI */}
+        <View style={styles.header}>
+          
+          {/* SISI KIRI: LOGO + INFO TRAVEL */}
+          <View style={styles.headerLeftContainer}>
+             {/* Logo diambil dari public folder */}
+             <PdfImage 
+                src={window.location.origin + "/rehlasticky.png"} 
+                style={styles.logo} 
+             />
+             <View style={styles.headerInfo}>
+                <Text style={styles.companyName}>REHLA INDONESIA</Text>
+                <Text style={styles.companySub}>PPIU SK No. 03010220049160002</Text>
+                <Text style={styles.companySub}>Komplek Permata Biru Bandung Jawa Barat</Text>
+             </View>
+          </View>
+
+          {/* SISI KANAN: JUDUL DOKUMEN */}
+          <View style={styles.headerRight}>
+            <Text style={styles.docTitle}>QUOTATION VISA</Text>
+            <Text style={styles.docRef}>Ref: {data.refNumber}</Text>
+          </View>
+        </View>
+
+        <Text style={styles.sectionHeader}>DAFTAR JEMAAH</Text>
+        <View style={{ marginBottom: 10 }}>
+           {customers.map((c: any, i: number) => (
+             <View key={i} style={styles.jemaahRow}>
+                <Text style={styles.colNo}>{i+1}.</Text>
+                <Text style={styles.colName}>{c.name || 'Nama Belum Diisi'}</Text>
+                <Text style={styles.colPass}>{c.passport ? `Passport: ${c.passport}` : '-'}</Text>
+             </View>
+           ))}
+        </View>
+
+        <Text style={styles.sectionHeader}>SPESIFIKASI VISA</Text>
+        <View style={styles.specContainer}>
+            <View style={styles.specItem}><Text style={styles.specLabel}>Jenis Visa</Text><Text style={styles.specValue}>{data.visaType}</Text></View>
+            <View style={styles.specItem}><Text style={styles.specLabel}>Provider</Text><Text style={styles.specValue}>{data.provider || '-'}</Text></View>
+            <View style={styles.specItem}><Text style={styles.specLabel}>Durasi</Text><Text style={styles.specValue}>{data.duration} Hari</Text></View>
+            <View style={styles.specItem}><Text style={styles.specLabel}>Tipe Entry</Text><Text style={styles.specValue}>{data.entryType}</Text></View>
+            <View style={styles.specItem}><Text style={styles.specLabel}>Proses</Text><Text style={styles.specValue}>{data.processingTime}</Text></View>
+        </View>
+
+        <View style={styles.table}>
+            <View style={styles.tableHeader}>
+                <Text style={[styles.th, styles.colDesc]}>Deskripsi Layanan</Text>
+                <Text style={[styles.th, styles.colPax]}>Pax</Text>
+                <Text style={[styles.th, styles.colPrice]}>Harga Satuan</Text>
+            </View>
+            <View style={styles.tableRow}>
+                <View style={styles.colDesc}>
+                    <Text style={{fontSize:9, fontWeight:'bold'}}>Biaya Visa {data.visaType} & Processing</Text>
+                    <Text style={{fontSize:8, color:'#666', marginTop:2}}>Include: Gov Fee, Tasheel, Insurance & Handling Fee.</Text>
                 </View>
-            ))}
-        </View>
-        <View style={pdfStyles.infoColumn}>
-            <Text style={pdfStyles.sectionTitle}>Spesifikasi Visa</Text>
-            <View style={pdfStyles.row}><Text style={pdfStyles.label}>Jenis:</Text><Text style={pdfStyles.value}>{data.visaType} ({data.entryType})</Text></View>
-            <View style={pdfStyles.row}><Text style={pdfStyles.label}>Provider:</Text><Text style={pdfStyles.value}>{data.provider || "All Provider"}</Text></View>
-            <View style={pdfStyles.row}><Text style={pdfStyles.label}>Durasi:</Text><Text style={pdfStyles.value}>{data.duration} Hari</Text></View>
-        </View>
-      </View>
-
-      <View style={pdfStyles.table}>
-        <View style={pdfStyles.tableHeader}>
-            <Text style={[pdfStyles.th, pdfStyles.colDesc]}>Deskripsi Layanan</Text>
-            <Text style={[pdfStyles.th, pdfStyles.colPax]}>Pax</Text>
-            <Text style={[pdfStyles.th, pdfStyles.colPrice]}>Harga Satuan</Text>
-        </View>
-        <View style={pdfStyles.tableRow}>
-            <View style={pdfStyles.colDesc}>
-                <Text style={pdfStyles.tdDesc}>Biaya Visa {data.visaType} & Processing</Text>
-                <Text style={pdfStyles.tdSub}>Include: Gov Fee, Tasheel, Insurance & Handling Fee.</Text>
+                <Text style={[styles.td, styles.colPax]}>{data.paxQuantity}</Text>
+                <Text style={[styles.td, styles.colPrice]}>{data.currency} {(data.price || 0).toLocaleString('id-ID')}</Text>
             </View>
-            <Text style={[pdfStyles.td, pdfStyles.colPax]}>{data.pax}</Text>
-            <Text style={[pdfStyles.td, pdfStyles.colPrice]}>
-                {data.currency.split(' ')[0]} {data.pricePerPax.toLocaleString()}
-            </Text>
         </View>
-      </View>
 
-      <View style={pdfStyles.totalContainer}>
-        <View style={pdfStyles.totalBox}>
-            <Text style={pdfStyles.totalLabel}>Total Estimasi Biaya</Text>
-            <Text style={pdfStyles.totalValue}>
-                {data.currency?.split(' ')[0] || "IDR"} {(data.pricePerPax * data.pax).toLocaleString()}
-            </Text>
+        <View style={styles.totalSection}>
+            <View style={styles.totalBox}>
+                <Text style={styles.grandTotalLabel}>Total Estimasi Biaya</Text>
+                <Text style={styles.grandTotalValue}>{data.currency} {total.toLocaleString('id-ID')}</Text>
+                {showIdrEstimate && (
+                  <View style={styles.estBox}>
+                      <Text style={styles.estLabel}>Estimasi Rupiah:</Text>
+                      <Text style={styles.estValue}>Rp {Math.ceil(data.convertedIDR).toLocaleString('id-ID')}</Text>
+                  </View>
+                )}
+            </View>
         </View>
-      </View>
 
-      <View style={pdfStyles.notesSection}>
-         <Text style={pdfStyles.notesLabel}>Checklist Dokumen Fisik:</Text>
-         <Text style={{fontSize: 9, color: '#444', marginBottom: 10, lineHeight: 1.4}}>{data.checklist}</Text>
-         <Text style={pdfStyles.notesLabel}>Catatan:</Text>
-         <Text style={pdfStyles.notesContent}>{data.notes}</Text>
-      </View>
-      <Text style={pdfStyles.footer}>Generated by Travel Rehla System</Text>
-    </Page>
-  </Document>
-);
+        <View style={styles.checklistSection}>
+            <Text style={{fontSize:10, fontWeight:'bold', marginBottom:5}}>Checklist Dokumen Fisik:</Text>
+            {data.checklist && data.checklist.split('\n').map((item: string, i: number) => (
+                <Text key={i} style={styles.checklistItem}>{item}</Text>
+            ))}
+            <Text style={{fontSize:10, fontWeight:'bold', marginTop:10, marginBottom:2}}>Catatan:</Text>
+            <Text style={styles.notes}>{data.notes}</Text>
+        </View>
 
-// --- 4. KOMPONEN UTAMA (WEB) ---
+        <Text style={styles.footer}>Generated by Travel Rehla System</Text>
+      </Page>
+    </Document>
+  );
+};
+
+// --- 3. MAIN PAGE COMPONENT ---
 export default function VisaGeneratorPage() {
-  const { register, control, setValue } = useForm<VisaFormValues>({
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  
+  // RATES DEFAULT
+  const [rates, setRates] = useState({ SAR: 4300, USD: 16200 }); 
+  const [loadingRates, setLoadingRates] = useState(true);
+
+  // FETCH LIVE RATES (API KEY BARU & REAL)
+  useEffect(() => {
+    const fetchRates = async () => {
+      try {
+        const res = await fetch('https://v6.exchangerate-api.com/v6/706a72e4c866009aea40c82a/latest/USD');
+        const data = await res.json();
+        
+        if(data && data.conversion_rates) {
+          setRates({
+            USD: Math.ceil(data.conversion_rates.IDR),
+            SAR: Math.ceil(data.conversion_rates.IDR / data.conversion_rates.SAR)
+          });
+          toast.success("Kurs Live Terupdate!");
+        }
+      } catch (e) { 
+        console.error("Gagal fetch rate", e);
+      } finally {
+        setLoadingRates(false);
+      }
+    };
+    fetchRates();
+  }, []);
+
+  const { register, control, watch, setValue } = useForm({
     defaultValues: {
+      refNumber: `Q-VIS-${Date.now().toString().slice(-6)}`,
+      customerWhatsapp: '',
       customers: [{ name: '', passport: '' }],
-      customerWhatsapp: '', 
-      currency: 'IDR (Rupiah)',
-      pax: 1,
-      duration: 90,
-      pricePerPax: 0,
-      visaType: 'Umrah Reguler',
-      entryType: 'Single Entry',
+      visaType: 'Tourist Visa (Multiple Entry)',
+      entryType: 'Multiple Entry', provider: '',
+      duration: '90', 
       processingTime: '3-5 Hari Kerja',
-      checklist: "1. Paspor Asli (Min 2 kata nama, berlaku 7 bulan).\n2. Pasfoto 4x6 Background Putih (2 Lembar).\n3. Buku Vaksin Meningitis (Kartu Kuning).",
-      notes: 'Harga belum termasuk tiket pesawat dan akomodasi hotel. Pembayaran DP minimal 50% saat pengajuan dokumen.'
+      paxQuantity: 1, price: 0, currency: 'IDR',
+      checklist: `1. Paspor Asli (Min 2 kata nama, berlaku 7 bulan).\n2. Pasfoto 4x6 Background Putih (2 Lembar).\n3. Buku Vaksin Meningitis (Kartu Kuning).`,
+      notes: `Harga belum termasuk tiket pesawat dan akomodasi hotel. Pembayaran DP minimal 50% saat pengajuan dokumen.`
     }
   });
 
   const { fields, append, remove } = useFieldArray({ control, name: "customers" });
-  const formValues = useWatch({ control });
-  
-  // State untuk Loading Kirim
-  const [isSending, setIsSending] = useState(false);
 
-  useEffect(() => {
-    if (formValues.customers) setValue('pax', formValues.customers.length);
-  }, [formValues.customers?.length, setValue]);
+  const w = useWatch({ control });
+  const currency = w.currency || 'IDR';
+  const total = (w.price || 0) * (w.paxQuantity || 1);
 
-  const totalEstimate = (formValues.pricePerPax || 0) * (formValues.pax || 1);
+  useEffect(() => { setValue('paxQuantity', fields.length); }, [fields.length, setValue]);
 
-  // --- FUNGSI KIRIM KE WHATSAPP ---
-  const handleSendWhatsApp = async () => {
-    if (!formValues.customerWhatsapp) {
-        toast.error("Harap isi Nomor WhatsApp Customer terlebih dahulu!");
+  let rateUsed = 1;
+  if (currency === 'USD') rateUsed = rates.USD;
+  if (currency === 'SAR') rateUsed = rates.SAR;
+  const convertedIDR = total * rateUsed * (1 + MARKUP_PERCENT);
+
+  const pdfData = { ...w, convertedIDR };
+
+  const handleDownload = async () => {
+    setIsGenerating(true);
+    try {
+      const blob = await pdf(<VisaPdfDoc data={pdfData} />).toBlob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a'); link.href = url; link.download = `Quotation-${w.customers?.[0]?.name || 'Visa'}.pdf`; link.click();
+      toast.success("PDF Visa Siap!");
+    } catch(e) { toast.error("Gagal PDF"); }
+    finally { setIsGenerating(false); }
+  };
+
+  const handleSendWA = async () => {
+    const leaderName = w.customers?.[0]?.name;
+    const phone = w.customerWhatsapp;
+
+    if (!leaderName || !phone) {
+        toast.error("Nama Jemaah Pertama & Nomor WhatsApp WAJIB diisi!");
         return;
     }
 
     setIsSending(true);
-    const toastId = toast.loading("Sedang membuat & mengirim PDF...");
+    const toastId = toast.loading("Memproses PDF & Mengirim ke WA...");
 
     try {
-        // 1. Generate PDF Blob
-        const blob = await pdf(<VisaPdfDocument data={formValues as VisaFormValues} />).toBlob();
-        
-        // 2. Siapkan Data
+        const blob = await pdf(<VisaPdfDoc data={pdfData} />).toBlob();
         const formData = new FormData();
-        formData.append('file', blob, `Quotation-${formValues.customers?.[0]?.name || 'Visa'}.pdf`);
-        formData.append('phone', formValues.customerWhatsapp);
-        formData.append('caption', `Halo Kak ${formValues.customers?.[0]?.name || 'Jemaah'},\n\nBerikut adalah Quotation Visa Anda dari Travel Rehla.\n\nTotal: ${formValues.currency?.split(' ')[0]} ${totalEstimate.toLocaleString()}`);
+        const safeName = leaderName.replace(/\s+/g, '-');
+        formData.append('file', blob, `Quotation-${safeName}.pdf`);
+        formData.append('phone', phone);
+        
+        const caption = `*Assalamu'alaikum, Kak ${leaderName}* 👋\n\nBerikut kami lampirkan Quotation *Visa Perjalanan*.\n\n📄 *Jenis:* ${w.visaType}\n👥 *Jumlah:* ${w.paxQuantity} Pax\n💰 *Total:* ${currency} ${total.toLocaleString('id-ID')}\n\nSilakan dicek dokumen terlampir. Terima kasih! 🙏`;
+        formData.append('caption', caption);
 
-        // 3. Panggil API Backend (Pastikan file route.ts sudah dibuat)
-        const response = await fetch('/api/send-quotation', {
-            method: 'POST',
-            body: formData,
-        });
-
-        if (response.ok) {
-            toast.success("Berhasil! Quotation terkirim ke WhatsApp Customer & Admin.", { id: toastId });
-        } else {
-            const err = await response.json();
-            toast.error("Gagal mengirim: " + (err.message || "Unknown Error"), { id: toastId });
-        }
-
-    } catch (error) {
-        console.error("Error generating/sending PDF:", error);
-        toast.error("Terjadi kesalahan sistem saat memproses PDF.", { id: toastId });
-    } finally {
-        setIsSending(false);
-    }
+        const res = await fetch('/api/send-quotation', { method: 'POST', body: formData });
+        
+        if (res.ok) toast.success("Sukses Terkirim ke WhatsApp!", { id: toastId });
+        else { const err = await res.json(); toast.error("Gagal: " + (err.message || "Cek koneksi WA"), { id: toastId }); }
+    } catch (e) { toast.error("Terjadi kesalahan sistem", { id: toastId }); } 
+    finally { setIsSending(false); }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6 md:p-8 font-sans text-slate-800">
-      {/* TOASTER (PENTING AGAR NOTIF MUNCUL) */}
+    <div className="p-6 md:p-8 max-w-7xl mx-auto font-sans text-slate-800">
       <Toaster position="top-center" richColors />
 
-      <div className="max-w-7xl mx-auto">
-        
-        {/* HEADER */}
-        <div className="flex items-center gap-4 mb-8">
-            <img src="/rehlasticky.png" alt="Logo Travel Rehla" style={{ width: 50, height: 50, objectFit: 'contain' }} />
-            <div>
-                <h1 className="text-2xl font-bold text-gray-800">Travel Rehla System</h1>
-                <p className="text-sm font-semibold" style={{ color: BRAND.secondary }}>Visa Quotation Generator Module</p>
-            </div>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b pb-6 gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-[#3a0519] flex gap-2 items-center"><FileText className="text-[#a77a0b]"/> Visa Quotation</h1>
+          <p className="text-sm text-gray-500">Buat penawaran visa Umrah/Turis.</p>
         </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
-          {/* === KIRI: FORM INPUT === */}
-          <div className="lg:col-span-7 space-y-6">
-            
-            {/* 1. Pelanggan & WhatsApp */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4" style={{ borderTopColor: BRAND.secondary }}>
-              <div className="flex items-center justify-between mb-4 pb-2 border-b border-gray-100">
-                 <div className="flex items-center gap-2">
-                    <Users size={18} style={{ color: BRAND.primary }} />
-                    <h2 className="font-bold text-sm" style={{ color: BRAND.primary }}>1. Daftar Jemaah & Kontak</h2>
-                 </div>
-                 <span className="text-xs text-white px-2 py-1 rounded-full font-bold" style={{ backgroundColor: BRAND.secondary }}>
-                    {fields.length} Orang
-                 </span>
-              </div>
-
-              {/* Input Nomor WA */}
-              <div className="mb-4 bg-green-50 p-3 rounded-lg border border-green-100">
-                  <label className="block text-[10px] font-bold text-green-700 uppercase mb-1">Nomor WhatsApp Customer (Wajib)</label>
-                  <input 
-                    {...register("customerWhatsapp")} 
-                    className="w-full p-2.5 bg-white border border-green-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none" 
-                    placeholder="Contoh: 08123456789 (Format angka)" 
-                  />
-                  <p className="text-[10px] text-green-600 mt-1">*File PDF akan dikirim otomatis ke nomor ini & nomor Admin.</p>
-              </div>
-              
-              <div className="space-y-3">
-                {fields.map((item, index) => (
-                    <div key={item.id} className="flex gap-3 items-end group">
-                        <div className="flex-1">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{index === 0 ? "Nama Jemaah" : ""}</label>
-                            <input {...register(`customers.${index}.name`)} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 outline-none" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties} placeholder={`Jemaah ${index + 1}`} />
-                        </div>
-                        <div className="flex-1">
-                            <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">{index === 0 ? "No. Paspor" : ""}</label>
-                            <input {...register(`customers.${index}.passport`)} className="w-full p-2.5 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 outline-none" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties} placeholder="X00000" />
-                        </div>
-                        {fields.length > 1 && (
-                            <button type="button" onClick={() => remove(index)} className="p-2.5 mb-[1px] text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition"><Trash2 size={18} /></button>
-                        )}
+        
+        {/* KOTAK KURS LIVE (API REAL) */}
+        <div className="flex gap-4">
+            {!loadingRates && (
+                <>
+                    <div className="bg-white border px-3 py-1 rounded shadow-sm text-right">
+                        <p className="text-[10px] font-bold text-gray-400">SAR (XE)</p>
+                        <p className="text-sm font-bold">Rp {rates.SAR.toLocaleString()}</p>
                     </div>
-                ))}
-              </div>
-              <button type="button" onClick={() => append({ name: '', passport: '' })} className="mt-4 flex items-center gap-2 text-sm font-bold hover:opacity-80 transition" style={{ color: BRAND.secondary }}>
-                <Plus size={16} /> Tambah Jemaah Lain
-              </button>
-            </div>
-
-            {/* 2. Spesifikasi */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4" style={{ borderTopColor: BRAND.secondary }}>
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                <FileText size={18} style={{ color: BRAND.primary }} />
-                <h2 className="font-bold text-sm" style={{ color: BRAND.primary }}>2. Spesifikasi Visa</h2>
-              </div>
-              <div className="grid grid-cols-2 gap-4 mb-4">
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Jenis Visa</label>
-                  <select {...register("visaType")} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties}>
-                    <option>Umrah Reguler</option>
-                    <option>Umrah Plus</option>
-                    <option>Tourist Visa</option>
-                  </select>
-                </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Provider</label>
-                    <input {...register("provider")} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties} placeholder="Contoh: Eatmarna..." />
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                 <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Tipe Entry</label>
-                  <select {...register("entryType")} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties}>
-                    <option>Single Entry</option>
-                    <option>Multiple Entry</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Durasi (Hari)</label>
-                  <input type="number" {...register("duration")} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties} />
-                </div>
-              </div>
-            </div>
-
-            {/* 3. Harga */}
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 border-t-4" style={{ borderTopColor: BRAND.secondary }}>
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-gray-100">
-                <CreditCard size={18} style={{ color: BRAND.primary }} />
-                <h2 className="font-bold text-sm" style={{ color: BRAND.primary }}>3. Harga & Persyaratan</h2>
-              </div>
-              <div className="grid grid-cols-3 gap-4 mb-6">
-                <div>
-                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Mata Uang</label>
-                   <select {...register("currency")} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties}>
-                    <option value="IDR (Rupiah)">IDR (Rupiah)</option>
-                    <option value="USD (Dollar)">USD (Dollar)</option>
-                   </select>
-                </div>
-                <div>
-                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Pax</label>
-                   <input type="number" {...register("pax", { valueAsNumber: true })} className="w-full p-3 bg-gray-100 border border-gray-200 rounded-lg text-sm outline-none cursor-not-allowed" readOnly />
-                </div>
-                <div>
-                   <label className="block text-[10px] font-bold text-gray-400 uppercase mb-1">Harga Satuan</label>
-                   <input type="number" {...register("pricePerPax", { valueAsNumber: true })} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties} />
-                </div>
-              </div>
-
-              <div className="mb-6">
-                 <div className="flex items-center gap-1 mb-1">
-                    <ListChecks size={14} className="text-gray-400"/>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Checklist Dokumen</label>
-                </div>
-                <textarea {...register("checklist")} rows={4} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm font-mono outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties}></textarea>
-              </div>
-
-              <div>
-                <div className="flex items-center gap-1 mb-1">
-                    <AlignLeft size={14} className="text-gray-400"/>
-                    <label className="block text-[10px] font-bold text-gray-400 uppercase">Catatan Tambahan</label>
-                </div>
-                <textarea {...register("notes")} rows={3} className="w-full p-3 bg-gray-50 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2" style={{ '--tw-ring-color': BRAND.secondary } as React.CSSProperties}></textarea>
-              </div>
-            </div>
-          </div>
-
-          {/* === KANAN: LIVE ESTIMATE === */}
-          <div className="lg:col-span-5">
-            <div className="sticky top-8">
-              <div className="bg-white rounded-xl shadow-lg border border-gray-200 overflow-hidden mb-6">
-                <div className="px-6 py-4 flex items-center justify-between" style={{ backgroundColor: BRAND.primary }}>
-                    <h3 className="font-bold text-white flex items-center gap-2">
-                        <CheckCircle size={18} className="text-green-400"/> Live Estimate
-                    </h3>
-                    <span className="text-xs text-white/80 bg-white/10 px-2 py-1 rounded-full">Auto-Update</span>
-                </div>
-                <div className="p-6 space-y-6">
-                    <div>
-                        <h4 className="font-bold text-sm mb-3 border-b border-gray-100 pb-1 flex justify-between" style={{ color: BRAND.secondary }}>
-                            1. Informasi Pelanggan
-                            <span className="text-xs text-gray-400 font-normal">{formValues.customers?.length} Pax</span>
-                        </h4>
-                        <div className="space-y-2 text-sm max-h-40 overflow-y-auto pr-2 custom-scrollbar">
-                            {formValues.customers?.map((cust, i) => (
-                                <div key={i} className="flex justify-between items-center border-b border-dashed border-gray-100 pb-1 last:border-0">
-                                    <span className="text-gray-500 text-xs w-6">{i+1}.</span>
-                                    <span className="font-semibold text-gray-800 truncate flex-1">{cust.name || "-"}</span>
-                                    <span className="text-gray-400 text-xs ml-2">{cust.passport}</span>
-                                </div>
-                            ))}
-                        </div>
+                    <div className="bg-white border px-3 py-1 rounded shadow-sm text-right">
+                        <p className="text-[10px] font-bold text-gray-400">USD (XE)</p>
+                        <p className="text-sm font-bold">Rp {rates.USD.toLocaleString()}</p>
                     </div>
-                    <div>
-                        <h4 className="font-bold text-sm mb-3 border-b border-gray-100 pb-1" style={{ color: BRAND.secondary }}>2. Spesifikasi Visa</h4>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-500">Jenis:</span><span className="font-semibold text-gray-800">{formValues.visaType}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Provider:</span><span className="font-semibold text-gray-800">{formValues.provider || "-"}</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Durasi:</span><span className="font-semibold text-gray-800">{formValues.duration} Hari</span></div>
-                        </div>
-                    </div>
-                    <div>
-                        <h4 className="font-bold text-sm mb-3 border-b border-gray-100 pb-1" style={{ color: BRAND.secondary }}>3. Harga & Pax</h4>
-                        <div className="space-y-2 text-sm">
-                            <div className="flex justify-between"><span className="text-gray-500">Jumlah Pax:</span><span className="font-semibold text-gray-800">{formValues.pax} Orang</span></div>
-                            <div className="flex justify-between"><span className="text-gray-500">Harga Satuan:</span><span className="font-semibold text-gray-800">{formValues.currency} {formValues.pricePerPax?.toLocaleString()}</span></div>
-                        </div>
-                        <div className="mt-4 pt-4 border-t border-dashed border-gray-300 flex justify-between items-center">
-                            <span className="font-bold text-gray-700">Total Estimasi :</span>
-                            <span className="text-2xl font-bold" style={{ color: BRAND.secondary }}>
-                                {formValues.currency?.split(' ')[0] || "IDR"} {totalEstimate.toLocaleString()}
-                            </span>
-                        </div>
-                    </div>
-                </div>
-              </div>
-
-              {/* TOMBOL AKSI: KIRIM WA */}
-              <div>
-                <button 
-                    onClick={handleSendWhatsApp}
-                    disabled={isSending}
-                    className="w-full py-4 text-white rounded-xl font-bold hover:opacity-90 transition shadow-lg flex justify-center items-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-                    style={{ backgroundColor: '#25D366' }} // Warna WA
-                >
-                    {isSending ? (
-                        <>
-                            <Loader2 size={20} className="animate-spin" /> Sedang Mengirim...
-                        </>
-                    ) : (
-                        <>
-                            <Send size={20}/> Kirim Quotation ke WhatsApp
-                        </>
-                    )}
-                </button>
-                 <p className="text-center text-xs text-gray-500 mt-3">PDF akan dikirim otomatis ke Customer & Admin</p>
-              </div>
-
-            </div>
-          </div>
+                </>
+            )}
         </div>
       </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        <div className="lg:col-span-8 space-y-6">
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-t-4" style={{borderTopColor: BRAND.secondary}}>
+                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="font-bold text-[#3a0519] flex items-center gap-2"><Users size={18}/> 1. Daftar Jemaah</h3>
+                    <button type="button" onClick={() => append({ name: '', passport: '' })} className="text-xs flex items-center gap-1 font-bold text-blue-600 hover:underline"><Plus size={14}/> Tambah Jemaah</button>
+                </div>
+                <div className="mb-4 bg-green-50 p-3 rounded border border-green-100">
+                      <label className="text-[10px] font-bold text-green-700 uppercase">WhatsApp Leader / Penerima File (Wajib)</label>
+                      <input {...register('customerWhatsapp')} className="w-full p-2 border rounded mt-1 outline-none focus:ring-2 focus:ring-green-500 bg-white" placeholder="0812..." />
+                </div>
+                <div className="space-y-3">
+                    {fields.map((field, index) => (
+                        <div key={field.id} className="flex flex-col md:flex-row gap-3 items-end bg-gray-50 p-3 rounded border relative group">
+                            <div className="flex-[3] w-full"><label className="text-[10px] font-bold text-gray-400 uppercase">{index + 1}. Nama Lengkap</label><input {...register(`customers.${index}.name`)} className="input-field mt-1" placeholder="Sesuai Paspor" /></div>
+                            <div className="flex-[2] w-full"><label className="text-[10px] font-bold text-gray-400 uppercase">No. Paspor</label><input {...register(`customers.${index}.passport`)} className="input-field mt-1" placeholder="X12345" /></div>
+                            {index > 0 && (<button onClick={() => remove(index)} className="p-2 text-gray-400 hover:text-red-500 mb-1"><Trash2 size={16}/></button>)}
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-t-4" style={{borderTopColor: BRAND.secondary}}>
+                <h3 className="font-bold text-[#3a0519] flex items-center gap-2 mb-4"><Globe size={18}/> 2. Spesifikasi Visa</h3>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div><label className="label-xs">Jenis Visa</label><select {...register('visaType')} className="input-field cursor-pointer"><option>Tourist Visa (Multiple Entry)</option><option>Visa Entry Mesir</option><option>Visa VoA Mesir</option><option>Visa Single Entry Umrah</option><option>Visa Turis Elektronik Saudi</option><option>Umrah Plus</option></select></div>
+                    <div><label className="label-xs">Provider</label><input {...register('provider')} className="input-field" placeholder="Provider..."/></div>
+                </div>
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div><label className="label-xs">Tipe Entry</label><select {...register('entryType')} className="input-field"><option>Single Entry</option><option>Multiple Entry</option></select></div>
+                    <div><label className="label-xs">Durasi (Hari)</label><input {...register('duration')} className="input-field" placeholder="90"/></div>
+                </div>
+                <div className="grid grid-cols-1">
+                    <div><label className="label-xs">Waktu Proses (Estimasi)</label><input {...register('processingTime')} className="input-field" placeholder="3-5 Hari Kerja"/></div>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-t-4" style={{borderTopColor: BRAND.secondary}}>
+                <div className="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 className="font-bold text-[#3a0519] flex items-center gap-2"><Banknote size={18}/> 3. Harga & Mata Uang</h3>
+                    <select {...register('currency')} className="bg-gray-100 text-xs font-bold p-1 rounded border cursor-pointer"><option value="IDR">IDR</option><option value="SAR">SAR</option><option value="USD">USD</option></select>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div><label className="label-xs">Jumlah Pax (Otomatis)</label><input type="number" {...register('paxQuantity', {valueAsNumber:true})} className="input-field bg-gray-100" readOnly/></div>
+                    <div><label className="label-xs">Harga Satuan</label><input type="number" {...register('price', {valueAsNumber:true})} className="input-field"/></div>
+                </div>
+            </div>
+
+            <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm border-t-4" style={{borderTopColor: BRAND.secondary}}>
+                <h3 className="font-bold text-[#3a0519] flex items-center gap-2 mb-4"><ClipboardList size={18}/> 4. Checklist & Catatan (Footer)</h3>
+                <div className="space-y-4">
+                    <div><label className="label-xs">Checklist Dokumen Fisik</label><textarea {...register('checklist')} className="input-field h-24 font-mono text-xs leading-relaxed"></textarea></div>
+                    <div><label className="label-xs">Catatan Tambahan</label><textarea {...register('notes')} className="input-field h-20 text-xs"></textarea></div>
+                </div>
+            </div>
+        </div>
+
+        <div className="lg:col-span-4">
+            <div className="sticky top-4 space-y-4">
+                <div className="bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden">
+                    <div className="bg-[#3a0519] p-4 flex items-center justify-between text-white">
+                         <div className="flex items-center gap-2"><Calculator size={20} className="text-[#a77a0b]"/><span className="font-bold text-sm uppercase">Live Preview</span></div>
+                         <div className="bg-white/10 px-2 py-1 rounded text-xs font-mono">{currency}</div>
+                    </div>
+                    <div className="p-5 space-y-5">
+                         <div>
+                            <p className="text-xs font-bold text-gray-400 uppercase mb-2 flex items-center gap-1"><User size={12}/> Leader / Jemaah</p>
+                            <div className="bg-gray-50 p-3 rounded border border-gray-100">
+                                <p className="font-bold text-[#3a0519] text-sm">{w.customers?.[0]?.name || 'Belum diisi...'}</p>
+                                {fields.length > 1 && <p className="text-xs text-gray-500 mt-1">+ {fields.length - 1} Jemaah Lainnya</p>}
+                            </div>
+                         </div>
+                         <div className="bg-yellow-50 p-3 rounded border border-yellow-200">
+                            <p className="text-xs font-bold text-yellow-700 uppercase mb-2 flex items-center gap-1"><Info size={12}/> Detail Visa</p>
+                            <div className="flex justify-between text-sm border-b border-dashed border-yellow-200 pb-1 mb-1"><span className="text-gray-600">Jenis</span><span className="font-bold text-[#3a0519] w-32 text-right truncate">{w.visaType}</span></div>
+                            <div className="flex justify-between text-sm"><span className="text-gray-600">Durasi</span><span className="font-bold text-[#3a0519]">{w.duration} Hari</span></div>
+                         </div>
+                         <div className="mt-4 pt-4 border-t border-gray-100">
+                             <p className="text-xs font-bold text-gray-500 uppercase">Total ({currency})</p>
+                             <p className="text-2xl font-bold text-[#3a0519]">{currency} {total.toLocaleString('id-ID')}</p>
+                             {currency !== 'IDR' && (
+                                <div className="bg-white border border-[#a77a0b] border-dashed rounded p-2 mt-2">
+                                    <p className="text-[10px] font-bold text-[#a77a0b] uppercase">Estimasi Rupiah (+20%)</p>
+                                    <p className="text-lg font-bold text-gray-700">Rp {convertedIDR.toLocaleString('id-ID', {maximumFractionDigits:0})}</p>
+                                </div>
+                             )}
+                         </div>
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <button onClick={handleSendWA} disabled={isSending} className="w-full py-4 bg-[#25D366] hover:bg-[#20bd5a] text-white rounded-xl font-bold shadow-lg flex justify-center items-center gap-2 transition disabled:opacity-50">
+                        {isSending ? <Loader2 size={20} className="animate-spin"/> : <Send size={20}/>} {isSending ? 'Mengirim ke WA...' : 'Kirim PDF ke WhatsApp'}
+                    </button>
+                    <button onClick={handleDownload} disabled={isGenerating} className="w-full py-3 bg-white border border-gray-300 hover:bg-gray-50 text-gray-700 rounded-lg font-bold shadow-sm flex justify-center items-center gap-2 transition disabled:opacity-50">
+                        {isGenerating ? <Loader2 className="animate-spin" size={16}/> : <Download size={16}/>} Download Manual
+                    </button>
+                </div>
+            </div>
+        </div>
+      </div>
+      <style jsx global>{`
+        .input-field { width: 100%; padding: 10px; border: 1px solid #e2e8f0; border-radius: 8px; font-size: 0.875rem; outline: none; background: #fff; transition: all 0.2s; }
+        .input-field:focus { border-color: ${BRAND.secondary}; ring: 2px; ring-color: #fdf8e8; }
+        .label-xs { display: block; font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 4px; }
+      `}</style>
     </div>
   );
 }
