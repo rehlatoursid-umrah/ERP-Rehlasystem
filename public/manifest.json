@@ -1,0 +1,25 @@
+{
+  "name": "ERP Travel Rehla",
+  "short_name": "Rehla ERP",
+  "description": "Sistem Manajemen ERP Travel Umrah & Haji - Rehlatours.id",
+  "start_url": "/dashboard",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3a0519",
+  "orientation": "portrait-primary",
+  "categories": ["business", "productivity"],
+  "icons": [
+    {
+      "src": "/rehlasticky.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/rehlasticky.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

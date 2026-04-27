@@ -1,0 +1,372 @@
+// ERP Rehla Tours - Database Schema
+// Travel Agency Umrah Management System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ============================================
+// 1. USER & AUTHENTICATION
+// ============================================
+
+model User {
+  id            String    @id @default(uuid())
+  email         String    @unique
+  name          String
+  password      String    // bcrypt hashed
+  role          String    @default("STAFF") // SUPERADMIN, ADMIN, STAFF, AGENT
+  phone         String?
+  isActive      Boolean   @default(true)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  activityLogs  ActivityLog[]
+  quotations    Quotation[]
+  cashFlows     CashFlow[]
+}
+
+// ============================================
+// 2. CUSTOMER / JAMAAH (CRM)
+// ============================================
+
+model Customer {
+  id              String    @id @default(uuid())
+  // Data Pribadi
+  fullName        String
+  nickname        String?
+  gender          String?   // MALE, FEMALE
+  birthDate       DateTime?
+  birthPlace      String?
+  nik             String?   // NIK KTP
+  phone           String?
+  whatsapp        String?
+  email           String?
+  address         String?
+  city            String?
+  province        String?
+  // Data Paspor
+  passportNumber  String?
+  passportExpiry  DateTime?
+  passportIssued  DateTime?
+  passportPhoto   String?   // URL to stored file
+  // Data Kesehatan
+  bloodType       String?
+  healthNotes     String?
+  vaccineMeningitis Boolean @default(false)
+  vaccineDate     DateTime?
+  // Data Emergency
+  emergencyName   String?
+  emergencyPhone  String?
+  emergencyRelation String?
+  // Meta
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  documents       Document[]
+  bookings        Booking[]
+}
+
+// ============================================
+// 3. DOCUMENT STORAGE
+// ============================================
+
+model Document {
+  id          String    @id @default(uuid())
+  customerId  String
+  customer    Customer  @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  category    String    // PASSPORT, KTP, VACCINE, VISA, PHOTO, PAYMENT_PROOF, OTHER
+  fileName    String
+  fileUrl     String    // Storage path/URL
+  fileSize    Int?
+  mimeType    String?
+  status      String    @default("UPLOADED") // UPLOADED, VERIFIED, REJECTED, EXPIRED
+  expiryDate  DateTime?
+  notes       String?
+  uploadedAt  DateTime  @default(now())
+  verifiedAt  DateTime?
+}
+
+// ============================================
+// 4. PACKAGES (PAKET UMRAH)
+// ============================================
+
+model Package {
+  id              String    @id @default(uuid())
+  name            String
+  slug            String    @unique
+  description     String?
+  type            String    @default("REGULAR") // REGULAR, VIP, VVIP, CUSTOM
+  status          String    @default("DRAFT") // DRAFT, ACTIVE, CLOSED, ARCHIVED
+  // Pricing (per person by room type)
+  priceQuad       Float     @default(0)
+  priceTriple     Float     @default(0)
+  priceDouble     Float     @default(0)
+  priceSingle     Float     @default(0)
+  currency        String    @default("IDR")
+  // Duration
+  durationDays    Int       @default(9)
+  durationNights  Int       @default(7)
+  // Details
+  includes        String?   // Text list of inclusions
+  excludes        String?   // Text list of exclusions
+  itinerary       String?   // JSON string of day-by-day schedule
+  // Hotels
+  hotelMakkah     String?
+  hotelMadinah    String?
+  // Airline
+  airline         String?
+  // Media
+  coverImage      String?
+  galleryImages   String?   // JSON array of image URLs
+  brochureUrl     String?
+  // Meta
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  departures      Departure[]
+  bookings        Booking[]
+}
+
+// ============================================
+// 5. DEPARTURE (KEBERANGKATAN)
+// ============================================
+
+model Departure {
+  id              String    @id @default(uuid())
+  packageId       String
+  package         Package   @relation(fields: [packageId], references: [id])
+  // Schedule
+  departureDate   DateTime
+  returnDate      DateTime?
+  // Flight
+  flightDepart    String?
+  flightReturn    String?
+  pnrCode         String?
+  // Capacity
+  maxCapacity     Int       @default(45)
+  currentPax      Int       @default(0)
+  // Team
+  tourLeader      String?
+  muthowwif       String?
+  // Status
+  status          String    @default("PLANNING") // PLANNING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  bookings        Booking[]
+}
+
+// ============================================
+// 6. BOOKING (PENDAFTARAN)
+// ============================================
+
+model Booking {
+  id              String    @id @default(uuid())
+  bookingCode     String    @unique // Auto-generated: BK-2026-0001
+  customerId      String
+  customer        Customer  @relation(fields: [customerId], references: [id])
+  packageId       String?
+  package         Package?  @relation(fields: [packageId], references: [id])
+  departureId     String?
+  departure       Departure? @relation(fields: [departureId], references: [id])
+  // Details
+  roomType        String?   // QUAD, TRIPLE, DOUBLE, SINGLE
+  priceTotal      Float     @default(0)
+  currency        String    @default("IDR")
+  paidAmount      Float     @default(0)
+  remainingAmount Float     @default(0)
+  // Status
+  status          String    @default("PENDING") // PENDING, CONFIRMED, DP_PAID, FULLY_PAID, CANCELLED, REFUNDED
+  notes           String?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  payments        Payment[]
+  invoices        Invoice[]
+}
+
+// ============================================
+// 7. PAYMENT (PEMBAYARAN)
+// ============================================
+
+model Payment {
+  id              String    @id @default(uuid())
+  bookingId       String
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  amount          Float
+  currency        String    @default("IDR")
+  method          String?   // TRANSFER, CASH, CARD, QRIS
+  bankName        String?
+  bankAccount     String?
+  referenceNumber String?
+  proofUrl        String?   // Upload bukti bayar
+  status          String    @default("PENDING") // PENDING, VERIFIED, REJECTED
+  paidAt          DateTime?
+  verifiedAt      DateTime?
+  verifiedBy      String?
+  notes           String?
+  createdAt       DateTime  @default(now())
+}
+
+// ============================================
+// 8. INVOICE
+// ============================================
+
+model Invoice {
+  id              String    @id @default(uuid())
+  invoiceNumber   String    @unique // INV-2026-0001
+  bookingId       String
+  booking         Booking   @relation(fields: [bookingId], references: [id])
+  // Amounts
+  subtotal        Float     @default(0)
+  discount        Float     @default(0)
+  tax             Float     @default(0)
+  total           Float     @default(0)
+  currency        String    @default("IDR")
+  paidAmount      Float     @default(0)
+  // Info
+  dueDate         DateTime?
+  status          String    @default("DRAFT") // DRAFT, SENT, PAID, OVERDUE, CANCELLED
+  notes           String?
+  pdfUrl          String?   // Generated PDF URL
+  sentAt          DateTime?
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// 9. QUOTATION HISTORY
+// ============================================
+
+model Quotation {
+  id              String    @id @default(uuid())
+  refNumber       String    @unique
+  type            String    // VISA, HOTEL, FLIGHT, ITINERARY
+  // Customer Info
+  customerName    String
+  customerPhone   String?
+  // Data
+  formData        String    // JSON string of all form data
+  totalAmount     Float     @default(0)
+  currency        String    @default("IDR")
+  // Status
+  status          String    @default("DRAFT") // DRAFT, SENT, ACCEPTED, EXPIRED
+  pdfUrl          String?
+  sentAt          DateTime?
+  // Created by
+  createdById     String?
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+// ============================================
+// 10. SUPPLIER
+// ============================================
+
+model Supplier {
+  id              String    @id @default(uuid())
+  name            String
+  type            String    // HOTEL, AIRLINE, VISA_PROVIDER, TRANSPORT, CATERING, OTHER
+  contactPerson   String?
+  phone           String?
+  email           String?
+  address         String?
+  country         String?
+  bankName        String?
+  bankAccount     String?
+  notes           String?
+  isActive        Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  // Relations
+  transactions    SupplierTransaction[]
+}
+
+model SupplierTransaction {
+  id              String    @id @default(uuid())
+  supplierId      String
+  supplier        Supplier  @relation(fields: [supplierId], references: [id])
+  description     String
+  amount          Float
+  currency        String    @default("IDR")
+  invoiceRef      String?
+  status          String    @default("PENDING") // PENDING, PAID, CANCELLED
+  paidAt          DateTime?
+  createdAt       DateTime  @default(now())
+}
+
+// ============================================
+// 11. CASHFLOW (ARUS KAS)
+// ============================================
+
+model CashFlowCategory {
+  id        String     @id @default(uuid())
+  name      String
+  type      String     // INCOME, EXPENSE
+  isDefault Boolean    @default(false)
+  createdAt DateTime   @default(now())
+
+  cashFlows CashFlow[]
+}
+
+model CashFlow {
+  id              String    @id @default(uuid())
+  type            String    // INCOME, EXPENSE
+  categoryId      String?
+  category        CashFlowCategory? @relation(fields: [categoryId], references: [id])
+  description     String
+  amount          Float
+  currency        String    @default("IDR")
+  // Payment details
+  bankName        String?
+  referenceNumber String?
+  // Relations
+  relatedBookingId String?  // Optional link to booking
+  // Meta
+  transactionDate DateTime  @default(now())
+  createdById     String?
+  createdBy       User?     @relation(fields: [createdById], references: [id])
+  notes           String?
+  createdAt       DateTime  @default(now())
+}
+
+// ============================================
+// 12. ACTIVITY LOG (AUDIT TRAIL)
+// ============================================
+
+model ActivityLog {
+  id          String    @id @default(uuid())
+  userId      String?
+  user        User?     @relation(fields: [userId], references: [id])
+  action      String    // CREATE, UPDATE, DELETE, LOGIN, SEND_WA, GENERATE_PDF
+  module      String    // CUSTOMER, BOOKING, PAYMENT, QUOTATION, etc.
+  description String
+  metadata    String?   // JSON of additional data
+  ipAddress   String?
+  createdAt   DateTime  @default(now())
+}
+
+// ============================================
+// 13. COMPANY SETTINGS
+// ============================================
+
+model Setting {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
+  group String @default("general") // general, whatsapp, branding, finance
+}

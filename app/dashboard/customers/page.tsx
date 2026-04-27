@@ -1,0 +1,365 @@
+"use client";
+
+import React, { useState, useEffect, useTransition } from 'react';
+import { Users, Plus, Search, Trash2, Edit, Eye, Phone, Mail, MapPin, FileText, X, ChevronRight, Shield, Loader2 } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerStats } from '@/app/actions/customers';
+import { Input, Textarea, Select } from '@/app/components/ui/Input';
+import { Button } from '@/app/components/ui/Button';
+import { Card, CardContent } from '@/app/components/ui/Card';
+import { PageHeader, SectionHeader } from '@/app/components/layout/PageHeader';
+import { Badge } from '@/app/components/ui/Badge';
+import { BRAND } from '@/app/lib/constants';
+
+type Customer = Awaited<ReturnType<typeof getCustomers>>[number];
+
+export default function CustomersPage() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [stats, setStats] = useState({ total: 0, withPassport: 0, withVaccine: 0 });
+  const [search, setSearch] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [isPending, startTransition] = useTransition();
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Form state
+  const [form, setForm] = useState({
+    fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '',
+    nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '',
+    passportNumber: '', passportExpiry: '', passportIssued: '',
+    bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '',
+    emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '',
+  });
+
+  const loadData = async () => {
+    setIsLoading(true);
+    try {
+      const [c, s] = await Promise.all([getCustomers(search || undefined), getCustomerStats()]);
+      setCustomers(c);
+      setStats(s);
+    } catch (e) { toast.error("Gagal memuat data"); }
+    finally { setIsLoading(false); }
+  };
+
+  useEffect(() => { loadData(); }, [search]);
+
+  const resetForm = () => {
+    setForm({ fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '', nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '', passportNumber: '', passportExpiry: '', passportIssued: '', bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '', emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '' });
+    setEditingId(null);
+  };
+
+  const handleEdit = (c: Customer) => {
+    setForm({
+      fullName: c.fullName || '', nickname: c.nickname || '', gender: c.gender || '',
+      birthDate: c.birthDate ? new Date(c.birthDate).toISOString().split('T')[0] : '',
+      birthPlace: c.birthPlace || '', nik: c.nik || '', phone: c.phone || '',
+      whatsapp: c.whatsapp || '', email: c.email || '', address: c.address || '',
+      city: c.city || '', province: c.province || '', passportNumber: c.passportNumber || '',
+      passportExpiry: c.passportExpiry ? new Date(c.passportExpiry).toISOString().split('T')[0] : '',
+      passportIssued: c.passportIssued ? new Date(c.passportIssued).toISOString().split('T')[0] : '',
+      bloodType: c.bloodType || '', healthNotes: c.healthNotes || '',
+      vaccineMeningitis: c.vaccineMeningitis || false,
+      vaccineDate: c.vaccineDate ? new Date(c.vaccineDate).toISOString().split('T')[0] : '',
+      emergencyName: c.emergencyName || '', emergencyPhone: c.emergencyPhone || '',
+      emergencyRelation: c.emergencyRelation || '', notes: c.notes || '',
+    });
+    setEditingId(c.id);
+    setShowForm(true);
+    setSelectedCustomer(null);
+  };
+
+  const handleSubmit = () => {
+    if (!form.fullName.trim()) { toast.error("Nama wajib diisi"); return; }
+
+    startTransition(async () => {
+      try {
+        if (editingId) {
+          await updateCustomer(editingId, form);
+          toast.success("Data jamaah berhasil diupdate!");
+        } else {
+          await createCustomer(form);
+          toast.success("Jamaah baru berhasil ditambahkan!");
+        }
+        resetForm();
+        setShowForm(false);
+        loadData();
+      } catch (e) { toast.error("Gagal menyimpan data"); }
+    });
+  };
+
+  const handleDelete = (id: string, name: string) => {
+    if (!confirm(`Yakin hapus data "${name}"?`)) return;
+    startTransition(async () => {
+      try {
+        await deleteCustomer(id);
+        toast.success("Data berhasil dihapus");
+        loadData();
+        if (selectedCustomer?.id === id) setSelectedCustomer(null);
+      } catch (e) { toast.error("Gagal menghapus"); }
+    });
+  };
+
+  const formatDate = (d: Date | string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
+
+  return (
+    <div className="p-6 md:p-8 max-w-7xl mx-auto">
+      <Toaster position="top-center" richColors />
+
+      <PageHeader
+        title="Database Jamaah (CRM)"
+        description="Kelola seluruh data jamaah dan dokumen penting."
+        icon={<Users className="text-[#a77a0b]" size={28} />}
+        actions={
+          <Button icon={<Plus size={18} />} onClick={() => { resetForm(); setShowForm(true); setSelectedCustomer(null); }}>
+            Tambah Jamaah
+          </Button>
+        }
+      />
+
+      {/* STATS */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {[
+          { label: 'Total Jamaah', value: stats.total, color: 'bg-blue-50 text-blue-700 border-blue-200', icon: <Users size={20}/> },
+          { label: 'Punya Paspor', value: stats.withPassport, color: 'bg-green-50 text-green-700 border-green-200', icon: <FileText size={20}/> },
+          { label: 'Sudah Vaksin', value: stats.withVaccine, color: 'bg-purple-50 text-purple-700 border-purple-200', icon: <Shield size={20}/> },
+        ].map((s, i) => (
+          <div key={i} className={`flex items-center gap-4 p-4 rounded-xl border ${s.color}`}>
+            <div className="p-2.5 rounded-lg bg-white shadow-sm">{s.icon}</div>
+            <div>
+              <p className="text-2xl font-bold">{s.value}</p>
+              <p className="text-xs font-medium opacity-80">{s.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* SEARCH */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+          <input
+            type="text" placeholder="Cari nama, telepon, paspor, kota..."
+            value={search} onChange={e => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl text-sm focus:outline-none focus:border-[#a77a0b] focus:ring-1 focus:ring-[#a77a0b]/20 bg-white shadow-sm"
+          />
+        </div>
+      </div>
+
+      <div className="flex gap-6">
+        {/* TABLE */}
+        <div className={`flex-1 transition-all ${selectedCustomer ? 'max-w-[60%]' : ''}`}>
+          <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 border-b text-left">
+                    <th className="px-4 py-3 font-semibold text-gray-600">Nama</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 hidden md:table-cell">Telepon</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Kota</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 hidden lg:table-cell">Paspor</th>
+                    <th className="px-4 py-3 font-semibold text-gray-600 text-right">Aksi</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {isLoading ? (
+                    <tr><td colSpan={5} className="text-center py-16 text-gray-400"><Loader2 className="animate-spin mx-auto mb-2" size={24}/>Memuat...</td></tr>
+                  ) : customers.length === 0 ? (
+                    <tr><td colSpan={5} className="text-center py-16 text-gray-400">
+                      <Users size={40} className="mx-auto mb-3 opacity-30"/>
+                      <p className="font-medium">Belum ada data jamaah</p>
+                      <p className="text-xs mt-1">Klik "Tambah Jamaah" untuk memulai</p>
+                    </td></tr>
+                  ) : customers.map(c => (
+                    <tr key={c.id} onClick={() => { setSelectedCustomer(c); setShowForm(false); }}
+                      className={`border-b hover:bg-gray-50 cursor-pointer transition-colors ${selectedCustomer?.id === c.id ? 'bg-[#fdf8e8]' : ''}`}>
+                      <td className="px-4 py-3">
+                        <p className="font-semibold text-gray-800">{c.fullName}</p>
+                        {c.email && <p className="text-xs text-gray-400 mt-0.5">{c.email}</p>}
+                      </td>
+                      <td className="px-4 py-3 text-gray-600 hidden md:table-cell">{c.phone || c.whatsapp || '-'}</td>
+                      <td className="px-4 py-3 text-gray-600 hidden lg:table-cell">{c.city || '-'}</td>
+                      <td className="px-4 py-3 hidden lg:table-cell">
+                        {c.passportNumber ? (
+                          <Badge variant="success" size="sm">{c.passportNumber}</Badge>
+                        ) : (
+                          <Badge variant="default" size="sm">Belum ada</Badge>
+                        )}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="flex gap-1 justify-end" onClick={e => e.stopPropagation()}>
+                          <button onClick={() => handleEdit(c)} className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg"><Edit size={16}/></button>
+                          <button onClick={() => handleDelete(c.id, c.fullName)} className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"><Trash2 size={16}/></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        {/* DETAIL PANEL */}
+        {selectedCustomer && !showForm && (
+          <div className="w-[40%] hidden lg:block">
+            <div className="bg-white rounded-xl border border-gray-200 shadow-sm sticky top-6 overflow-hidden">
+              <div className="bg-[#3a0519] p-5 text-white">
+                <div className="flex justify-between items-start">
+                  <div>
+                    <p className="text-xs text-[#a77a0b] font-bold uppercase tracking-wider mb-1">Detail Jamaah</p>
+                    <h3 className="text-lg font-bold">{selectedCustomer.fullName}</h3>
+                    {selectedCustomer.nickname && <p className="text-sm text-white/70 mt-0.5">"{selectedCustomer.nickname}"</p>}
+                  </div>
+                  <button onClick={() => setSelectedCustomer(null)} className="text-white/50 hover:text-white p-1"><X size={18}/></button>
+                </div>
+              </div>
+              <div className="p-5 space-y-4 max-h-[calc(100vh-260px)] overflow-y-auto">
+                {/* Contact */}
+                <div>
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Kontak</p>
+                  <div className="space-y-2">
+                    {selectedCustomer.phone && <p className="text-sm flex items-center gap-2"><Phone size={14} className="text-gray-400"/>{selectedCustomer.phone}</p>}
+                    {selectedCustomer.whatsapp && <p className="text-sm flex items-center gap-2"><Phone size={14} className="text-green-500"/>{selectedCustomer.whatsapp} <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">WA</span></p>}
+                    {selectedCustomer.email && <p className="text-sm flex items-center gap-2"><Mail size={14} className="text-gray-400"/>{selectedCustomer.email}</p>}
+                    {selectedCustomer.city && <p className="text-sm flex items-center gap-2"><MapPin size={14} className="text-gray-400"/>{selectedCustomer.city}{selectedCustomer.province ? `, ${selectedCustomer.province}` : ''}</p>}
+                  </div>
+                </div>
+
+                {/* Identity */}
+                <div className="border-t pt-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Identitas</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><p className="text-[10px] text-gray-400">NIK</p><p className="font-medium">{selectedCustomer.nik || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Gender</p><p className="font-medium">{selectedCustomer.gender || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Tgl Lahir</p><p className="font-medium">{formatDate(selectedCustomer.birthDate)}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Gol. Darah</p><p className="font-medium">{selectedCustomer.bloodType || '-'}</p></div>
+                  </div>
+                </div>
+
+                {/* Passport */}
+                <div className="border-t pt-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Paspor</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><p className="text-[10px] text-gray-400">Nomor</p><p className="font-medium font-mono">{selectedCustomer.passportNumber || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Berlaku s/d</p><p className="font-medium">{formatDate(selectedCustomer.passportExpiry)}</p></div>
+                  </div>
+                </div>
+
+                {/* Emergency */}
+                {selectedCustomer.emergencyName && (
+                  <div className="border-t pt-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Kontak Darurat</p>
+                    <p className="text-sm font-medium">{selectedCustomer.emergencyName}</p>
+                    <p className="text-xs text-gray-500">{selectedCustomer.emergencyRelation} • {selectedCustomer.emergencyPhone}</p>
+                  </div>
+                )}
+
+                {/* Notes */}
+                {selectedCustomer.notes && (
+                  <div className="border-t pt-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Catatan</p>
+                    <p className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">{selectedCustomer.notes}</p>
+                  </div>
+                )}
+
+                <div className="pt-4 flex gap-2">
+                  <Button variant="outline" size="sm" icon={<Edit size={14}/>} onClick={() => handleEdit(selectedCustomer)} className="flex-1">Edit</Button>
+                  <Button variant="danger" size="sm" icon={<Trash2 size={14}/>} onClick={() => handleDelete(selectedCustomer.id, selectedCustomer.fullName)} className="flex-1">Hapus</Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* MODAL FORM */}
+      {showForm && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-start justify-center overflow-y-auto py-10 px-4">
+          <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl">
+            <div className="bg-[#3a0519] p-5 rounded-t-2xl flex justify-between items-center">
+              <h2 className="text-white font-bold text-lg">{editingId ? 'Edit Data Jamaah' : 'Tambah Jamaah Baru'}</h2>
+              <button onClick={() => { setShowForm(false); resetForm(); }} className="text-white/50 hover:text-white"><X size={20}/></button>
+            </div>
+
+            <div className="p-6 space-y-6 max-h-[70vh] overflow-y-auto">
+              {/* Personal */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Data Pribadi</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input label="Nama Lengkap *" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Sesuai paspor" />
+                  <Input label="Nama Panggilan" value={form.nickname} onChange={e => setForm({...form, nickname: e.target.value})} />
+                  <Select label="Jenis Kelamin" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} options={[{value:'',label:'Pilih...'},{value:'MALE',label:'Laki-laki'},{value:'FEMALE',label:'Perempuan'}]} />
+                  <Input label="Tempat Lahir" value={form.birthPlace} onChange={e => setForm({...form, birthPlace: e.target.value})} />
+                  <Input type="date" label="Tanggal Lahir" value={form.birthDate} onChange={e => setForm({...form, birthDate: e.target.value})} />
+                  <Input label="NIK" value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} placeholder="16 digit" />
+                </div>
+              </div>
+
+              {/* Contact */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Kontak</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input label="No. HP" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} icon={<Phone size={14}/>} />
+                  <Input label="WhatsApp" value={form.whatsapp} onChange={e => setForm({...form, whatsapp: e.target.value})} icon={<Phone size={14}/>} />
+                  <Input label="Email" value={form.email} onChange={e => setForm({...form, email: e.target.value})} icon={<Mail size={14}/>} />
+                  <Input label="Kota" value={form.city} onChange={e => setForm({...form, city: e.target.value})} icon={<MapPin size={14}/>} />
+                  <div className="md:col-span-2">
+                    <Input label="Alamat Lengkap" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
+                  </div>
+                  <Input label="Provinsi" value={form.province} onChange={e => setForm({...form, province: e.target.value})} />
+                </div>
+              </div>
+
+              {/* Passport */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Data Paspor</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Nomor Paspor" value={form.passportNumber} onChange={e => setForm({...form, passportNumber: e.target.value})} className="font-mono" />
+                  <Input type="date" label="Tgl Terbit" value={form.passportIssued} onChange={e => setForm({...form, passportIssued: e.target.value})} />
+                  <Input type="date" label="Berlaku s/d" value={form.passportExpiry} onChange={e => setForm({...form, passportExpiry: e.target.value})} />
+                </div>
+              </div>
+
+              {/* Health */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Kesehatan</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Select label="Golongan Darah" value={form.bloodType} onChange={e => setForm({...form, bloodType: e.target.value})} options={[{value:'',label:'Pilih...'},{value:'A',label:'A'},{value:'B',label:'B'},{value:'AB',label:'AB'},{value:'O',label:'O'}]} />
+                  <div className="flex items-end gap-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium pb-2">
+                      <input type="checkbox" checked={form.vaccineMeningitis} onChange={e => setForm({...form, vaccineMeningitis: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                      Sudah Vaksin Meningitis
+                    </label>
+                  </div>
+                  <Input type="date" label="Tgl Vaksin" value={form.vaccineDate} onChange={e => setForm({...form, vaccineDate: e.target.value})} />
+                </div>
+                <Textarea label="Catatan Kesehatan" value={form.healthNotes} onChange={e => setForm({...form, healthNotes: e.target.value})} rows={2} className="mt-4" placeholder="Alergi, riwayat penyakit, dsb." />
+              </div>
+
+              {/* Emergency */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Kontak Darurat</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <Input label="Nama" value={form.emergencyName} onChange={e => setForm({...form, emergencyName: e.target.value})} />
+                  <Input label="No. HP" value={form.emergencyPhone} onChange={e => setForm({...form, emergencyPhone: e.target.value})} />
+                  <Input label="Hubungan" value={form.emergencyRelation} onChange={e => setForm({...form, emergencyRelation: e.target.value})} placeholder="Suami/Istri/Anak" />
+                </div>
+              </div>
+
+              {/* Notes */}
+              <Textarea label="Catatan Tambahan" value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} rows={2} />
+            </div>
+
+            <div className="p-6 border-t bg-gray-50 rounded-b-2xl flex gap-3 justify-end">
+              <Button variant="outline" onClick={() => { setShowForm(false); resetForm(); }}>Batal</Button>
+              <Button onClick={handleSubmit} loading={isPending} icon={editingId ? <Edit size={16}/> : <Plus size={16}/>}>
+                {editingId ? 'Simpan Perubahan' : 'Tambah Jamaah'}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

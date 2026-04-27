@@ -2,14 +2,20 @@
 
 import React, { useState, useEffect } from 'react';
 import { useForm, useFieldArray, useWatch } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { Document, Page, Text, View, StyleSheet, pdf, Image as PdfImage } from '@react-pdf/renderer';
-// FIXED: Semua icon sudah di-import
 import { 
   BookOpen, Calendar, MapPin, Coffee, Utensils, Moon, 
   Loader2, Plane, Hotel, Calculator, User, Image as ImageIcon, 
   FileCheck, Trash2, Plus, Bus
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
+
+// Shared Components & Utils
+import { Input, Textarea, Select } from '@/app/components/ui/Input';
+import { Button } from '@/app/components/ui/Button';
+import { itinerarySchema, ItineraryInput } from '@/app/lib/validators';
+import { BRAND } from '@/app/lib/constants';
 
 // --- 1. CONFIGURATION ---
 const COLORS = {
@@ -20,29 +26,10 @@ const COLORS = {
   gray: '#9ca3af',      
 };
 
-// --- 2. DATA TYPES ---
-type ItineraryForm = {
-  packageName: string;
-  programTitle: string;
-  programDesc: string;
-  coverImage: string;
-  guideName: string; guideEdu: string; guideExp: string; guideLang: string; guidePhoto: string;
-  airline: string; flightRoute: string; pnr: string;
-  departFlight: string; departDate: string; departTime: string; airportOrigin: string;
-  arrivalDate: string; arrivalTime: string; airportDest: string;
-  visaProvider: string; visaType: string; visaDuration: string; muassasah: string;
-  visaIssueDate: string; visaExpiryDate: string;
-  hotelMakkah: string; hotelMakkahRating: string; hotelMakkahLoc: string; hotelMakkahImg: string; hotelMakkahCheckIn: string; hotelMakkahCheckOut: string;
-  hotelMadinah: string; hotelMadinahRating: string; hotelMadinahLoc: string; hotelMadinahImg: string; hotelMadinahCheckIn: string; hotelMadinahCheckOut: string;
-  days: { date: string; city: string; activity: string; time: string; vehicle: string; meals: { b: boolean; l: boolean; d: boolean; }; }[];
-  currency: string; costFlight: number; costHotel: number; costVisa: number; costHandling: number; margin: number;
-  includes: string; excludes: string;
-};
-
-// --- 3. PDF STYLES ---
+// --- 2. PDF STYLES ---
 const s = StyleSheet.create({
   page: { padding: 0, fontFamily: 'Helvetica', backgroundColor: '#fff', color: '#333' },
-  coverBg: { height: '100%', width: '100%', position: 'absolute' },
+  coverBg: { height: '100%', width: '100%', position: 'absolute', objectFit: 'cover' },
   coverOverlay: { position: 'absolute', bottom: 0, width: '100%', height: '40%', backgroundColor: COLORS.primary, opacity: 0.95, padding: 40, borderTopLeftRadius: 40 },
   coverTitle: { fontSize: 32, color: '#fff', fontWeight: 'bold', textTransform: 'uppercase', marginBottom: 5 },
   coverSub: { fontSize: 14, color: COLORS.secondary, letterSpacing: 2, marginBottom: 20 },
@@ -77,8 +64,8 @@ const s = StyleSheet.create({
   footer: { position: 'absolute', bottom: 20, left: 30, right: 30, textAlign: 'center', fontSize: 8, color: '#aaa', borderTop: '1px solid #eee', paddingTop: 10 }
 });
 
-// --- 4. PDF COMPONENT ---
-const BookletPdf = ({ data }: { data: ItineraryForm }) => {
+// --- 3. PDF COMPONENT ---
+const BookletPdf = ({ data }: { data: ItineraryInput }) => {
   const totalPrice = (data.costFlight||0) + (data.costHotel||0) + (data.costVisa||0) + (data.costHandling||0) + (data.margin||0);
   
   return (
@@ -90,7 +77,7 @@ const BookletPdf = ({ data }: { data: ItineraryForm }) => {
            <Text style={s.coverSub}>{data.programTitle}</Text>
            <Text style={s.coverTitle}>{data.packageName}</Text>
            <View style={{height:2, width:50, backgroundColor:COLORS.secondary, marginVertical:10}}/>
-           <Text style={{color:'#fff', fontSize:12}}>Keberangkatan: {new Date(data.departDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'})}</Text>
+           <Text style={{color:'#fff', fontSize:12}}>Keberangkatan: {data.departDate ? new Date(data.departDate).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '-'}</Text>
         </View>
       </Page>
 
@@ -145,12 +132,13 @@ const BookletPdf = ({ data }: { data: ItineraryForm }) => {
   );
 };
 
-// --- 5. MAIN PAGE ---
+// --- 4. MAIN PAGE ---
 export default function ItineraryGeneratorPage() {
   const [isSending, setIsSending] = useState(false);
   const [activeTab, setActiveTab] = useState('cover');
 
-  const { register, control, watch } = useForm<ItineraryForm>({
+  const { register, control, watch, trigger, formState: { errors } } = useForm<ItineraryInput>({
+    resolver: zodResolver(itinerarySchema),
     defaultValues: {
       packageName: 'Paket Umrah Eksklusif 2026', programTitle: 'Menjemput Rindu di Baitullah', programDesc: 'Program perjalanan ibadah Umrah 9 hari...',
       coverImage: '', guideName: 'Ust. Abdullah', guideEdu: 'Lc. Univ Madinah', guideExp: '8 Tahun', guideLang: 'Arab/Indo', guidePhoto: '',
@@ -167,42 +155,287 @@ export default function ItineraryGeneratorPage() {
   const { fields, append, remove } = useFieldArray({ control, name: 'days' });
   const w = useWatch({ control });
 
-  useEffect(() => { if(fields.length === 0) for(let i=0; i<9; i++) append({ date: '', city: 'Makkah', activity: 'Ibadah', time: '08:00', vehicle: 'Bus AC', meals: {b:true, l:true, d:true} }); }, []);
+  useEffect(() => { 
+    if(fields.length === 0) {
+      for(let i=0; i<9; i++) {
+        append({ date: '', city: 'Makkah', activity: 'Ibadah', time: '08:00', vehicle: 'Bus AC', meals: {b:true, l:true, d:true} }); 
+      }
+    }
+  }, [append, fields.length]);
 
   const handleDownload = async () => {
+    const isValid = await trigger();
+    if (!isValid) {
+      toast.error("Mohon cek kembali isian form");
+      return;
+    }
+
     setIsSending(true);
     try {
-        const blob = await pdf(<BookletPdf data={w as ItineraryForm} />).toBlob();
+        const blob = await pdf(<BookletPdf data={w as ItineraryInput} />).toBlob();
         const url = URL.createObjectURL(blob);
-        const link = document.createElement('a'); link.href = url; link.download = `Booklet-${w.packageName}.pdf`; link.click();
+        const link = document.createElement('a'); 
+        link.href = url; 
+        link.download = `Booklet-${w.packageName}.pdf`; 
+        link.click();
         toast.success("Booklet Premium Siap!");
-    } catch(e) { toast.error("Gagal Render PDF"); } finally { setIsSending(false); }
+    } catch(e) { 
+      toast.error("Gagal Render PDF"); 
+    } finally { 
+      setIsSending(false); 
+    }
   };
 
+  const tabs = [
+    { id: 'cover', label: 'Cover', icon: <ImageIcon size={14}/> },
+    { id: 'guide', label: 'Muthowwif', icon: <User size={14}/> },
+    { id: 'flight', label: 'Flight', icon: <Plane size={14}/> },
+    { id: 'visa', label: 'Visa', icon: <FileCheck size={14}/> },
+    { id: 'hotel', label: 'Hotel', icon: <Hotel size={14}/> },
+    { id: 'itinerary', label: 'Itinerary', icon: <Calendar size={14}/> },
+    { id: 'pricing', label: 'Pricing', icon: <Calculator size={14}/> },
+  ];
+
   return (
-    <div className="flex h-screen bg-gray-50 font-sans text-slate-800">
+    <div className="flex h-[calc(100vh-64px)] bg-gray-50 font-sans text-slate-800 -mx-6 md:-mx-8">
       <Toaster position="top-center" richColors />
-      <div className="w-7/12 flex flex-col border-r bg-white h-full">
-        <div className="p-4 border-b z-10 flex justify-between items-center bg-white shadow-sm">
-            <h1 className="font-bold text-[#3a0519] flex items-center gap-2"><BookOpen size={18}/> Booklet Engine Pro</h1>
-            <div className="flex gap-1 overflow-x-auto">
-                {['cover','guide','flight','visa','hotel','itinerary','pricing'].map(t => (
-                    <button key={t} onClick={()=>setActiveTab(t)} className={`px-3 py-1 text-[10px] font-bold rounded-full uppercase transition ${activeTab===t ? 'bg-[#3a0519] text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'}`}>{t}</button>
+      
+      {/* Left Panel - Editor */}
+      <div className="w-7/12 flex flex-col border-r bg-white h-full overflow-hidden">
+        
+        {/* Header Tabs */}
+        <div className="border-b z-10 bg-white shadow-sm flex flex-col">
+            <div className="p-4 flex items-center gap-2 border-b border-gray-100">
+              <BookOpen size={20} className="text-[#3a0519]"/>
+              <h1 className="font-bold text-[#3a0519] text-lg">Booklet Engine Pro</h1>
+            </div>
+            <div className="flex overflow-x-auto px-4 py-3 gap-2 no-scrollbar">
+                {tabs.map(t => (
+                    <button 
+                      key={t.id} 
+                      onClick={() => setActiveTab(t.id)} 
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-lg uppercase transition whitespace-nowrap ${activeTab === t.id ? 'bg-[#3a0519] text-white shadow-sm' : 'bg-gray-50 text-gray-500 hover:bg-gray-100 border border-gray-200'}`}
+                    >
+                      {t.icon}
+                      {t.label}
+                    </button>
                 ))}
             </div>
         </div>
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-            {activeTab === 'cover' && (<div className="space-y-4 animate-in fade-in"><div><label className="label-block">Nama Paket</label><input {...register('packageName')} className="input-block font-bold"/></div><div><label className="label-block">Tagline</label><input {...register('programTitle')} className="input-block"/></div><div><label className="label-block">Deskripsi</label><textarea {...register('programDesc')} className="input-block h-24"/></div><div><label className="label-block">URL Cover</label><input {...register('coverImage')} className="input-block" placeholder="https://..."/></div></div>)}
-            {activeTab === 'guide' && (<div className="space-y-4 animate-in fade-in"><div className="grid grid-cols-2 gap-4"><div><label className="label-block">Nama Muthowwif</label><input {...register('guideName')} className="input-block"/></div><div><label className="label-block">Pendidikan</label><input {...register('guideEdu')} className="input-block"/></div><div><label className="label-block">Pengalaman</label><input {...register('guideExp')} className="input-block"/></div><div><label className="label-block">Bahasa</label><input {...register('guideLang')} className="input-block"/></div><div className="col-span-2"><label className="label-block">URL Foto</label><input {...register('guidePhoto')} className="input-block"/></div></div></div>)}
-            {activeTab === 'itinerary' && (<div className="space-y-4 animate-in fade-in"><button onClick={() => append({ date: '', city: '', activity: '', time: '', vehicle: '', meals: {b:true, l:true, d:true} })} className="text-xs bg-blue-50 text-blue-600 px-3 py-2 rounded font-bold w-full flex items-center justify-center gap-2"><Plus size={14}/> Tambah Hari</button>{fields.map((field, index) => (<div key={field.id} className="border p-3 rounded bg-gray-50 flex gap-3 items-center"><div className="w-8 h-8 bg-[#3a0519] text-white rounded-full flex items-center justify-center font-bold text-xs">{index+1}</div><div className="flex-1 grid grid-cols-2 gap-2"><input type="date" {...register(`days.${index}.date`)} className="input-block text-xs"/><input {...register(`days.${index}.time`)} className="input-block text-xs" placeholder="Jam"/><input {...register(`days.${index}.activity`)} className="input-block text-xs font-bold col-span-2" placeholder="Kegiatan"/><input {...register(`days.${index}.city`)} className="input-block text-xs" placeholder="Kota"/><input {...register(`days.${index}.vehicle`)} className="input-block text-xs" placeholder="Kendaraan"/></div><button onClick={() => remove(index)} className="text-red-500"><Trash2 size={16}/></button></div>))}</div>)}
-            {activeTab === 'pricing' && (<div className="space-y-4 animate-in fade-in"><div className="bg-green-50 p-4 rounded border border-green-200"><h3 className="font-bold text-green-800 mb-3 text-xs">RINCIAN BIAYA</h3><div className="space-y-2"><div className="flex justify-between items-center"><label className="text-xs">Tiket Pesawat</label><input type="number" {...register('costFlight', {valueAsNumber:true})} className="input-block w-32 text-right"/></div><div className="flex justify-between items-center"><label className="text-xs">Akomodasi Hotel</label><input type="number" {...register('costHotel', {valueAsNumber:true})} className="input-block w-32 text-right"/></div><div className="flex justify-between items-center"><label className="text-xs">Visa & Dokumen</label><input type="number" {...register('costVisa', {valueAsNumber:true})} className="input-block w-32 text-right"/></div><div className="flex justify-between items-center"><label className="text-xs">Handling</label><input type="number" {...register('costHandling', {valueAsNumber:true})} className="input-block w-32 text-right"/></div><div className="flex justify-between items-center border-t pt-2"><label className="text-xs font-bold text-[#3a0519]">Margin</label><input type="number" {...register('margin', {valueAsNumber:true})} className="input-block w-32 text-right font-bold"/></div></div></div><div className="grid grid-cols-2 gap-4"><div><label className="label-block">Termasuk</label><textarea {...register('includes')} className="input-block h-24"/></div><div><label className="label-block">Tidak Termasuk</label><textarea {...register('excludes')} className="input-block h-24"/></div></div></div>)}
+
+        {/* Editor Content */}
+        <div className="flex-1 overflow-y-auto p-6 bg-gray-50">
+            {activeTab === 'cover' && (
+              <div className="space-y-5 animate-in fade-in">
+                  <Input label="Nama Paket" {...register('packageName')} error={errors.packageName?.message} className="font-bold text-lg" />
+                  <Input label="Tagline / Sub-title" {...register('programTitle')} />
+                  <Textarea label="Deskripsi Program" {...register('programDesc')} rows={4} />
+                  <Input label="URL Cover Image (High-Res)" {...register('coverImage')} placeholder="https://..." icon={<ImageIcon size={16}/>} />
+              </div>
+            )}
+            
+            {activeTab === 'guide' && (
+              <div className="space-y-5 animate-in fade-in">
+                <div className="grid grid-cols-2 gap-5">
+                    <Input label="Nama Muthowwif" {...register('guideName')} icon={<User size={16}/>} />
+                    <Input label="Pendidikan Terakhir" {...register('guideEdu')} placeholder="Lc. Univ Madinah" />
+                    <Input label="Pengalaman" {...register('guideExp')} placeholder="8 Tahun" />
+                    <Input label="Bahasa" {...register('guideLang')} placeholder="Arab/Indo" />
+                    <div className="col-span-2">
+                        <Input label="URL Foto Profile" {...register('guidePhoto')} placeholder="https://..." icon={<ImageIcon size={16}/>} />
+                    </div>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'flight' && (
+              <div className="space-y-5 animate-in fade-in">
+                  <div className="grid grid-cols-3 gap-4">
+                      <Input label="Maskapai" {...register('airline')} placeholder="Saudia" />
+                      <Input label="Rute" {...register('flightRoute')} placeholder="CGK-JED" />
+                      <Input label="PNR" {...register('pnr')} placeholder="SA-12345" />
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm mt-4">
+                      <h4 className="font-bold text-sm mb-3">Keberangkatan (Departure)</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                          <Input label="No Penerbangan" {...register('departFlight')} />
+                          <Input type="date" label="Tanggal" {...register('departDate')} />
+                          <Input type="time" label="Jam" {...register('departTime')} />
+                          <Input label="Bandara Asal" {...register('airportOrigin')} />
+                      </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <h4 className="font-bold text-sm mb-3">Kedatangan (Arrival)</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                          <Input type="date" label="Tanggal" {...register('arrivalDate')} />
+                          <Input type="time" label="Jam" {...register('arrivalTime')} />
+                          <div className="col-span-2">
+                              <Input label="Bandara Tujuan" {...register('airportDest')} />
+                          </div>
+                      </div>
+                  </div>
+              </div>
+            )}
+
+            {activeTab === 'visa' && (
+              <div className="space-y-5 animate-in fade-in">
+                  <div className="grid grid-cols-2 gap-4">
+                      <Input label="Provider Visa" {...register('visaProvider')} placeholder="Muqeem" />
+                      <Input label="Tipe Visa" {...register('visaType')} placeholder="Umrah Visa" />
+                      <Input label="Durasi" {...register('visaDuration')} placeholder="90 Hari" />
+                      <Input label="Muassasah" {...register('muassasah')} placeholder="Rawaf Mina" />
+                      <Input type="date" label="Issue Date" {...register('visaIssueDate')} />
+                      <Input type="date" label="Expiry Date" {...register('visaExpiryDate')} />
+                  </div>
+              </div>
+            )}
+
+            {activeTab === 'hotel' && (
+              <div className="space-y-6 animate-in fade-in">
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <h4 className="font-bold text-sm mb-3 text-[#3a0519]">Hotel Makkah</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                          <Input label="Nama Hotel" {...register('hotelMakkah')} />
+                          <Input label="Bintang / Rating" {...register('hotelMakkahRating')} placeholder="⭐⭐⭐⭐⭐" />
+                          <Input label="Lokasi/Jarak" {...register('hotelMakkahLoc')} />
+                          <Input label="URL Foto" {...register('hotelMakkahImg')} />
+                          <Input type="date" label="Check In" {...register('hotelMakkahCheckIn')} />
+                          <Input type="date" label="Check Out" {...register('hotelMakkahCheckOut')} />
+                      </div>
+                  </div>
+                  <div className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm">
+                      <h4 className="font-bold text-sm mb-3 text-[#3a0519]">Hotel Madinah</h4>
+                      <div className="grid grid-cols-2 gap-4">
+                          <Input label="Nama Hotel" {...register('hotelMadinah')} />
+                          <Input label="Bintang / Rating" {...register('hotelMadinahRating')} placeholder="⭐⭐⭐⭐" />
+                          <Input label="Lokasi/Jarak" {...register('hotelMadinahLoc')} />
+                          <Input label="URL Foto" {...register('hotelMadinahImg')} />
+                          <Input type="date" label="Check In" {...register('hotelMadinahCheckIn')} />
+                          <Input type="date" label="Check Out" {...register('hotelMadinahCheckOut')} />
+                      </div>
+                  </div>
+              </div>
+            )}
+
+            {activeTab === 'itinerary' && (
+              <div className="space-y-4 animate-in fade-in">
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-blue-600 border-blue-200 bg-blue-50 hover:bg-blue-100"
+                    onClick={() => append({ date: '', city: '', activity: '', time: '', vehicle: '', meals: {b:true, l:true, d:true} })}
+                    icon={<Plus size={16}/>}
+                  >
+                    Tambah Hari Baru
+                  </Button>
+
+                  {fields.map((field, index) => (
+                      <div key={field.id} className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm flex gap-4 items-start">
+                          <div className="w-8 h-8 bg-[#3a0519] text-white rounded-full flex items-center justify-center font-bold text-sm shrink-0">
+                              {index+1}
+                          </div>
+                          <div className="flex-1 space-y-3">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                  <Input type="date" label="Tanggal" {...register(`days.${index}.date` as const)} />
+                                  <Input type="time" label="Jam" {...register(`days.${index}.time` as const)} />
+                                  <Input label="Kota" {...register(`days.${index}.city` as const)} placeholder="Makkah" />
+                                  <Input label="Transport" {...register(`days.${index}.vehicle` as const)} placeholder="Bus" icon={<Bus size={14}/>} />
+                              </div>
+                              <Input label="Kegiatan Utama" {...register(`days.${index}.activity` as const)} className="font-medium" placeholder="Melaksanakan ibadah umrah..." />
+                              
+                              <div className="flex gap-4">
+                                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                                      <input type="checkbox" {...register(`days.${index}.meals.b` as const)} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                                      Breakfast
+                                  </label>
+                                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                                      <input type="checkbox" {...register(`days.${index}.meals.l` as const)} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                                      Lunch
+                                  </label>
+                                  <label className="flex items-center gap-1.5 text-xs font-medium cursor-pointer">
+                                      <input type="checkbox" {...register(`days.${index}.meals.d` as const)} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                                      Dinner
+                                  </label>
+                              </div>
+                          </div>
+                          <button onClick={() => remove(index)} className="text-gray-400 hover:text-red-500 hover:bg-red-50 p-2 rounded-lg shrink-0 mt-4">
+                              <Trash2 size={18}/>
+                          </button>
+                      </div>
+                  ))}
+              </div>
+            )}
+
+            {activeTab === 'pricing' && (
+              <div className="space-y-6 animate-in fade-in">
+                  <div className="bg-white p-5 rounded-lg border border-gray-200 shadow-sm">
+                      <div className="flex justify-between items-center mb-4">
+                          <h3 className="font-bold text-[#3a0519]">Rincian Biaya Dasar</h3>
+                          <Select 
+                            {...register('currency')}
+                            options={[{value:'IDR', label:'IDR'}, {value:'USD', label:'USD'}, {value:'SAR', label:'SAR'}]}
+                            className="w-24 py-1.5 text-sm font-bold"
+                          />
+                      </div>
+                      <div className="space-y-4">
+                          <div className="flex items-center justify-between gap-4">
+                              <label className="text-sm font-medium w-1/2">Tiket Pesawat</label>
+                              <div className="w-1/2"><Input type="number" {...register('costFlight', {valueAsNumber:true})} className="text-right" /></div>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                              <label className="text-sm font-medium w-1/2">Akomodasi Hotel</label>
+                              <div className="w-1/2"><Input type="number" {...register('costHotel', {valueAsNumber:true})} className="text-right" /></div>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                              <label className="text-sm font-medium w-1/2">Visa & Dokumen</label>
+                              <div className="w-1/2"><Input type="number" {...register('costVisa', {valueAsNumber:true})} className="text-right" /></div>
+                          </div>
+                          <div className="flex items-center justify-between gap-4">
+                              <label className="text-sm font-medium w-1/2">Handling & Muthowwif</label>
+                              <div className="w-1/2"><Input type="number" {...register('costHandling', {valueAsNumber:true})} className="text-right" /></div>
+                          </div>
+                          <div className="flex items-center justify-between gap-4 pt-4 border-t border-gray-100">
+                              <label className="text-sm font-bold text-[#3a0519] w-1/2">Margin (Laba)</label>
+                              <div className="w-1/2"><Input type="number" {...register('margin', {valueAsNumber:true})} className="text-right font-bold bg-yellow-50" /></div>
+                          </div>
+                      </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <Textarea label="Harga Termasuk" {...register('includes')} rows={6} className="text-sm" />
+                      <Textarea label="Harga Tidak Termasuk" {...register('excludes')} rows={6} className="text-sm" />
+                  </div>
+              </div>
+            )}
         </div>
       </div>
-      <div className="w-5/12 bg-gray-100 h-full flex flex-col justify-center items-center p-10 border-l">
-         <div className="text-center mb-6"><BookOpen size={64} className="text-[#3a0519] mx-auto mb-4 opacity-20"/><h2 className="text-xl font-bold text-gray-700">Booklet Premium Ready</h2><p className="text-sm text-gray-500 mt-2">Klik tombol di bawah untuk men-generate PDF Booklet resolusi tinggi.</p></div>
-         <button onClick={handleDownload} disabled={isSending} className="bg-[#3a0519] hover:bg-[#5a0826] text-white px-8 py-4 rounded-xl font-bold shadow-xl flex items-center gap-3 transition transform hover:scale-105">{isSending ? <Loader2 size={24} className="animate-spin"/> : <FileCheck size={24}/>} DOWNLOAD BOOKLET PDF</button>
+      
+      {/* Right Panel - Action */}
+      <div className="w-5/12 bg-slate-50 h-full flex flex-col justify-center items-center p-10 border-l relative overflow-hidden">
+         {/* Decorative Background */}
+         <div className="absolute inset-0 opacity-[0.03] pointer-events-none flex items-center justify-center">
+             <BookOpen size={400} />
+         </div>
+
+         <div className="relative z-10 text-center mb-10">
+             <div className="w-24 h-24 bg-white rounded-full shadow-md flex items-center justify-center mx-auto mb-6">
+                 <BookOpen size={40} className="text-[#3a0519]"/>
+             </div>
+             <h2 className="text-2xl font-bold text-[#3a0519]">Booklet Premium</h2>
+             <p className="text-sm text-gray-500 mt-2 max-w-[280px] mx-auto">
+                 Sistem akan membuat PDF resolusi tinggi dengan desain eksklusif menggunakan data yang Anda masukkan.
+             </p>
+         </div>
+
+         <Button 
+            size="lg"
+            onClick={handleDownload} 
+            loading={isSending} 
+            icon={<FileCheck size={20}/>}
+            className="w-full max-w-sm py-4 shadow-xl text-base hover:scale-[1.02] active:scale-[0.98]"
+         >
+            DOWNLOAD BOOKLET PDF
+         </Button>
       </div>
-      <style jsx global>{`.label-block { display: block; font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; margin-bottom: 3px; } .input-block { width: 100%; padding: 8px; border: 1px solid #e2e8f0; border-radius: 6px; font-size: 12px; outline: none; transition: all 0.2s; background: #fff; } .input-block:focus { border-color: ${COLORS.secondary}; ring: 1px; }`}</style>
     </div>
   );
 }
