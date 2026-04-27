@@ -103,6 +103,29 @@ export async function updateSettings(settings: { key: string; value: string; gro
 // INVOICE
 // ============================================
 
+// --- Generate sequential invoice number (anti-duplicate) ---
+async function generateInvoiceNumber(): Promise<string> {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const prefix = `INV-${year}${month}-`;
+
+  const lastInvoice = await db.invoice.findFirst({
+    where: { invoiceNumber: { startsWith: prefix } },
+    orderBy: { invoiceNumber: 'desc' },
+    select: { invoiceNumber: true },
+  });
+
+  let seq = 1;
+  if (lastInvoice) {
+    const lastSeq = parseInt(lastInvoice.invoiceNumber.replace(prefix, ''), 10);
+    if (!isNaN(lastSeq)) seq = lastSeq + 1;
+  }
+
+  return `${prefix}${String(seq).padStart(4, '0')}`;
+}
+
+// --- Get all invoices ---
 export async function getInvoices() {
   return db.invoice.findMany({
     orderBy: { createdAt: 'desc' },
@@ -111,12 +134,68 @@ export async function getInvoices() {
         include: {
           customer: { select: { id: true, fullName: true, phone: true, whatsapp: true } },
           package: { select: { name: true } },
+          payments: { where: { status: 'VERIFIED' }, orderBy: { createdAt: 'desc' } },
         }
       }
     }
   });
 }
 
+// --- Get single invoice detail ---
+export async function getInvoiceDetail(id: string) {
+  return db.invoice.findUnique({
+    where: { id },
+    include: {
+      booking: {
+        include: {
+          customer: true,
+          package: { select: { name: true, type: true } },
+          departure: { select: { departureDate: true, returnDate: true } },
+          payments: { orderBy: { createdAt: 'desc' } },
+        }
+      }
+    }
+  });
+}
+
+// --- Auto-generate invoice from booking ---
+export async function createInvoiceForBooking(bookingId: string) {
+  // Check if invoice already exists for this booking
+  const existing = await db.invoice.findFirst({ where: { bookingId } });
+  if (existing) return existing;
+
+  const booking = await db.booking.findUnique({
+    where: { id: bookingId },
+    include: { payments: { where: { status: 'VERIFIED' } } },
+  });
+  if (!booking) throw new Error('Booking tidak ditemukan');
+
+  const invoiceNumber = await generateInvoiceNumber();
+  const subtotal = booking.priceTotal;
+  const totalPaid = booking.payments.reduce((s, p) => s + p.amount, 0);
+
+  // Due date = 14 days from now
+  const dueDate = new Date();
+  dueDate.setDate(dueDate.getDate() + 14);
+
+  return db.invoice.create({
+    data: {
+      invoiceNumber,
+      bookingId,
+      subtotal,
+      discount: 0,
+      tax: 0,
+      total: subtotal,
+      paidAmount: totalPaid,
+      currency: booking.currency,
+      dueDate,
+      status: totalPaid >= subtotal ? 'PAID' : 'DRAFT',
+      paidAt: totalPaid >= subtotal ? new Date() : null,
+    }
+  });
+}
+
+// --- Create invoice manually ---
 export async function createInvoice(data: {
   bookingId: string;
   subtotal: number;
@@ -125,11 +204,7 @@ export async function createInvoice(data: {
   dueDate?: string;
   notes?: string;
 }) {
-  const count = await db.invoice.count();
-  const year = new Date().getFullYear();
-  const month = String(new Date().getMonth() + 1).padStart(2, '0');
-  const invoiceNumber = `INV-${year}${month}-${String(count + 1).padStart(4, '0')}`;
-
+  const invoiceNumber = await generateInvoiceNumber();
   const discount = data.discount || 0;
   const tax = data.tax || 0;
   const total = data.subtotal - discount + tax;
@@ -149,6 +224,33 @@ export async function createInvoice(data: {
   });
 }
 
+// --- Update invoice (discount, tax, notes, dueDate) ---
+export async function updateInvoice(id: string, data: {
+  discount?: number;
+  tax?: number;
+  notes?: string;
+  dueDate?: string;
+}) {
+  const invoice = await db.invoice.findUnique({ where: { id } });
+  if (!invoice) throw new Error('Invoice tidak ditemukan');
+
+  const discount = data.discount ?? invoice.discount;
+  const tax = data.tax ?? invoice.tax;
+  const total = invoice.subtotal - discount + tax;
+
+  return db.invoice.update({
+    where: { id },
+    data: {
+      discount,
+      tax,
+      total,
+      notes: data.notes !== undefined ? (data.notes || null) : invoice.notes,
+      dueDate: data.dueDate ? new Date(data.dueDate) : invoice.dueDate,
+    }
+  });
+}
+
+// --- Update invoice status ---
 export async function updateInvoiceStatus(id: string, status: string) {
   const updateData: Record<string, unknown> = { status };
   if (status === 'SENT') updateData.sentAt = new Date();
@@ -157,6 +259,29 @@ export async function updateInvoiceStatus(id: string, status: string) {
   return db.invoice.update({ where: { id }, data: updateData });
 }
 
+// --- Sync invoice paidAmount with booking payments ---
+export async function syncInvoiceWithPayments(bookingId: string) {
+  const invoice = await db.invoice.findFirst({ where: { bookingId } });
+  if (!invoice) return null;
+
+  const payments = await db.payment.findMany({
+    where: { bookingId, status: 'VERIFIED' },
+  });
+
+  const totalPaid = payments.reduce((s, p) => s + p.amount, 0);
+  const isFullyPaid = totalPaid >= invoice.total;
+
+  return db.invoice.update({
+    where: { id: invoice.id },
+    data: {
+      paidAmount: totalPaid,
+      status: isFullyPaid ? 'PAID' : (invoice.status === 'DRAFT' ? 'DRAFT' : invoice.status),
+      paidAt: isFullyPaid ? new Date() : invoice.paidAt,
+    }
+  });
+}
+
+// --- Delete invoice ---
 export async function deleteInvoice(id: string) {
   await db.invoice.delete({ where: { id } });
   return { success: true };

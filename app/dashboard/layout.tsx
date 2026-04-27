@@ -6,7 +6,7 @@ import { signOut } from 'next-auth/react';
 import { 
   FileText, Building2, LogOut, LayoutDashboard, Menu, Plane, MapPin, 
   Users, Wallet, X, ChevronDown, Package, ClipboardList, Truck,
-  CalendarCheck, Shield, Settings
+  CalendarCheck, Shield, Settings, Receipt
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -17,7 +17,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     ['/dashboard/visa', '/dashboard/hotel', '/dashboard/flight', '/dashboard/itinerary'].some(p => pathname === p)
   );
   const [opsOpen, setOpsOpen] = useState(
-    ['/dashboard/packages', '/dashboard/bookings', '/dashboard/suppliers', '/dashboard/departures'].some(p => pathname === p)
+    ['/dashboard/packages', '/dashboard/bookings', '/dashboard/invoices', '/dashboard/suppliers', '/dashboard/departures'].some(p => pathname === p)
   );
 
   const handleLogout = async () => {
@@ -33,6 +33,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const opsMenu = [
     { name: 'Paket Umrah', href: '/dashboard/packages', icon: <Package size={18}/> },
     { name: 'Booking', href: '/dashboard/bookings', icon: <ClipboardList size={18}/> },
+    { name: 'Invoice', href: '/dashboard/invoices', icon: <Receipt size={18}/> },
     { name: 'Keberangkatan', href: '/dashboard/departures', icon: <CalendarCheck size={18}/> },
     { name: 'Supplier', href: '/dashboard/suppliers', icon: <Truck size={18}/> },
   ];

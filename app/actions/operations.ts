@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from '@/app/lib/db';
+import { createInvoiceForBooking, syncInvoiceWithPayments } from '@/app/actions/admin';
 
 // --- GET ALL SUPPLIERS ---
 export async function getSuppliers(type?: string) {
@@ -116,7 +117,7 @@ export async function createBooking(data: {
   const year = new Date().getFullYear();
   const bookingCode = `BK-${year}-${String(count + 1).padStart(4, '0')}`;
 
-  return db.booking.create({
+  const booking = await db.booking.create({
     data: {
       bookingCode,
       customerId: data.customerId,
@@ -128,6 +129,15 @@ export async function createBooking(data: {
       notes: data.notes || null,
     }
   });
+
+  // Auto-generate invoice for this booking
+  try {
+    await createInvoiceForBooking(booking.id);
+  } catch (e) {
+    console.error('Auto-invoice creation failed:', e);
+  }
+
+  return booking;
 }
 
 // --- UPDATE BOOKING STATUS ---
@@ -174,6 +184,13 @@ export async function addPayment(data: {
       where: { id: data.bookingId },
       data: { paidAmount: totalPaid, remainingAmount: Math.max(0, remaining), status: newStatus }
     });
+  }
+
+  // Auto-sync invoice with payment data
+  try {
+    await syncInvoiceWithPayments(data.bookingId);
+  } catch (e) {
+    console.error('Invoice sync failed:', e);
   }
 
   return payment;
