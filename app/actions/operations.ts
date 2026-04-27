@@ -166,7 +166,7 @@ export async function addPayment(data: {
   });
 
   if (booking) {
-    const totalPaid = booking.payments.reduce((s, p) => s + p.amount, 0);
+    const totalPaid = booking.payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0);
     const remaining = booking.priceTotal - totalPaid;
     const newStatus = remaining <= 0 ? 'FULLY_PAID' : totalPaid > 0 ? 'DP_PAID' : booking.status;
 

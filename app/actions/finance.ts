@@ -158,16 +158,17 @@ export async function getAnnualReport(year: number): Promise<AnnualReport> {
 
 // --- GET FINANCE SUMMARY (for dashboard compat) ---
 export async function getFinanceSummary() {
-  const allFlows = await db.cashFlow.findMany();
-  const totalIncome = allFlows.filter(f => f.type === 'INCOME').reduce((s, f) => s + f.amount, 0);
-  const totalExpense = allFlows.filter(f => f.type === 'EXPENSE').reduce((s, f) => s + f.amount, 0);
+  type CF = { type: string; amount: number; transactionDate: Date };
+  const allFlows: CF[] = await db.cashFlow.findMany();
+  const totalIncome = allFlows.filter((f: CF) => f.type === 'INCOME').reduce((s: number, f: CF) => s + f.amount, 0);
+  const totalExpense = allFlows.filter((f: CF) => f.type === 'EXPENSE').reduce((s: number, f: CF) => s + f.amount, 0);
 
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
-  const recentFlows = allFlows.filter(f => new Date(f.transactionDate) >= sixMonthsAgo);
+  const recentFlows = allFlows.filter((f: CF) => new Date(f.transactionDate) >= sixMonthsAgo);
 
   const monthlyData: Record<string, { income: number; expense: number }> = {};
-  recentFlows.forEach(f => {
+  recentFlows.forEach((f: CF) => {
     const key = new Date(f.transactionDate).toLocaleDateString('id-ID', { month: 'short', year: '2-digit' });
     if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
     if (f.type === 'INCOME') monthlyData[key].income += f.amount;

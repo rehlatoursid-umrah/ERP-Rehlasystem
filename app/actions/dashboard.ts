@@ -2,6 +2,8 @@
 
 import { db } from '@/app/lib/db';
 
+type CF = { type: string; amount: number; transactionDate: Date };
+
 export async function getDashboardStats() {
   // Count totals
   const totalCustomers = await db.customer.count();
@@ -9,9 +11,9 @@ export async function getDashboardStats() {
   const totalQuotations = await db.quotation.count();
 
   // Financial overview
-  const allCashFlows = await db.cashFlow.findMany();
-  const totalIncome = allCashFlows.filter(f => f.type === 'INCOME').reduce((s, f) => s + f.amount, 0);
-  const totalExpense = allCashFlows.filter(f => f.type === 'EXPENSE').reduce((s, f) => s + f.amount, 0);
+  const allCashFlows: CF[] = await db.cashFlow.findMany();
+  const totalIncome = allCashFlows.filter((f: CF) => f.type === 'INCOME').reduce((s: number, f: CF) => s + f.amount, 0);
+  const totalExpense = allCashFlows.filter((f: CF) => f.type === 'EXPENSE').reduce((s: number, f: CF) => s + f.amount, 0);
   const balance = totalIncome - totalExpense;
 
   // Pending payments
@@ -55,8 +57,8 @@ export async function getDashboardStats() {
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
   
   allCashFlows
-    .filter(f => new Date(f.transactionDate) >= sixMonthsAgo)
-    .forEach(f => {
+    .filter((f: CF) => new Date(f.transactionDate) >= sixMonthsAgo)
+    .forEach((f: CF) => {
       const key = new Date(f.transactionDate).toLocaleDateString('id-ID', { month: 'short' });
       if (!monthlyData[key]) monthlyData[key] = { income: 0, expense: 0 };
       if (f.type === 'INCOME') monthlyData[key].income += f.amount;
