@@ -27,10 +27,11 @@ export default function CustomersPage() {
   const [form, setForm] = useState({
     fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '',
     nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '',
-    passportNumber: '', passportExpiry: '', passportIssued: '',
+    passportNumber: '', passportExpiry: '', passportIssued: '', passportPhoto: '',
     bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '',
     emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '',
   });
+  const [isUploading, setIsUploading] = useState(false);
 
   const loadData = async () => {
     setIsLoading(true);
@@ -45,7 +46,7 @@ export default function CustomersPage() {
   useEffect(() => { loadData(); }, [search]);
 
   const resetForm = () => {
-    setForm({ fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '', nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '', passportNumber: '', passportExpiry: '', passportIssued: '', bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '', emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '' });
+    setForm({ fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '', nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '', passportNumber: '', passportExpiry: '', passportIssued: '', passportPhoto: '', bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '', emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '' });
     setEditingId(null);
   };
 
@@ -58,6 +59,7 @@ export default function CustomersPage() {
       city: c.city || '', province: c.province || '', passportNumber: c.passportNumber || '',
       passportExpiry: c.passportExpiry ? new Date(c.passportExpiry).toISOString().split('T')[0] : '',
       passportIssued: c.passportIssued ? new Date(c.passportIssued).toISOString().split('T')[0] : '',
+      passportPhoto: c.passportPhoto || '',
       bloodType: c.bloodType || '', healthNotes: c.healthNotes || '',
       vaccineMeningitis: c.vaccineMeningitis || false,
       vaccineDate: c.vaccineDate ? new Date(c.vaccineDate).toISOString().split('T')[0] : '',
@@ -240,10 +242,15 @@ export default function CustomersPage() {
                 {/* Passport */}
                 <div className="border-t pt-4">
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Paspor</p>
-                  <div className="grid grid-cols-2 gap-3 text-sm">
+                  <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div><p className="text-[10px] text-gray-400">Nomor</p><p className="font-medium font-mono">{selectedCustomer.passportNumber || '-'}</p></div>
                     <div><p className="text-[10px] text-gray-400">Berlaku s/d</p><p className="font-medium">{formatDate(selectedCustomer.passportExpiry)}</p></div>
                   </div>
+                  {selectedCustomer.passportPhoto && (
+                    <a href={selectedCustomer.passportPhoto} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-[#a77a0b] bg-[#a77a0b]/10 px-3 py-1.5 rounded-lg hover:bg-[#a77a0b]/20 transition-colors">
+                      <FileText size={14} /> Lihat File Paspor
+                    </a>
+                  )}
                 </div>
 
                 {/* Emergency */}
@@ -318,6 +325,55 @@ export default function CustomersPage() {
                   <Input label="Nomor Paspor" value={form.passportNumber} onChange={e => setForm({...form, passportNumber: e.target.value})} className="font-mono" />
                   <Input type="date" label="Tgl Terbit" value={form.passportIssued} onChange={e => setForm({...form, passportIssued: e.target.value})} />
                   <Input type="date" label="Berlaku s/d" value={form.passportExpiry} onChange={e => setForm({...form, passportExpiry: e.target.value})} />
+                  
+                  <div className="md:col-span-3">
+                    <label className="block text-xs font-medium text-gray-500 mb-1.5">Foto Paspor (Upload)</label>
+                    <div className="flex items-center gap-4">
+                      {form.passportPhoto ? (
+                        <div className="relative group">
+                          <img src={form.passportPhoto} alt="Passport" className="w-24 h-24 object-cover rounded-lg border" />
+                          <button onClick={() => setForm({...form, passportPhoto: ''})} className="absolute -top-2 -right-2 bg-red-500 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+                            <X size={14} />
+                          </button>
+                        </div>
+                      ) : null}
+                      <input 
+                        type="file" 
+                        accept="image/*,.pdf"
+                        onChange={async (e) => {
+                          const file = e.target.files?.[0];
+                          if (!file) return;
+                          
+                          setIsUploading(true);
+                          const toastId = toast.loading("Mengunggah paspor...");
+                          
+                          try {
+                            const formData = new FormData();
+                            formData.append('file', file);
+                            formData.append('folder', 'passports');
+                            
+                            const { uploadAction } = await import('@/app/actions/storage');
+                            const res = await uploadAction(formData);
+                            
+                            if (res.success && res.url) {
+                              setForm({...form, passportPhoto: res.url});
+                              toast.success("Paspor berhasil diunggah", { id: toastId });
+                            } else {
+                              toast.error(res.error || "Gagal mengunggah", { id: toastId });
+                            }
+                          } catch (err) {
+                            toast.error("Terjadi kesalahan jaringan", { id: toastId });
+                          } finally {
+                            setIsUploading(false);
+                            // Reset input
+                            e.target.value = '';
+                          }
+                        }}
+                        disabled={isUploading}
+                        className={`text-sm file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#a77a0b]/10 file:text-[#a77a0b] hover:file:bg-[#a77a0b]/20 ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}`}
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
