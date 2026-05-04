@@ -148,8 +148,23 @@ export async function updateCustomer(id: string, data: {
 
 // --- DELETE CUSTOMER ---
 export async function deleteCustomer(id: string) {
-  await db.customer.delete({ where: { id } });
-  return { success: true };
+  try {
+    // Check if customer has bookings
+    const customer = await db.customer.findUnique({
+      where: { id },
+      include: { _count: { select: { bookings: true } } }
+    });
+
+    if (customer && customer._count.bookings > 0) {
+      return { success: false, error: "Gagal: Jamaah tidak dapat dihapus karena memiliki riwayat transaksi/booking aktif." };
+    }
+
+    await db.customer.delete({ where: { id } });
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Customer Error:", error);
+    return { success: false, error: "Terjadi kesalahan internal saat menghapus data." };
+  }
 }
 
 // --- GET STATS ---

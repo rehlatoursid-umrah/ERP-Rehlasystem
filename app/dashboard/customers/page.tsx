@@ -94,11 +94,15 @@ export default function CustomersPage() {
     if (!confirm(`Yakin hapus data "${name}"?`)) return;
     startTransition(async () => {
       try {
-        await deleteCustomer(id);
-        toast.success("Data berhasil dihapus");
-        loadData();
-        if (selectedCustomer?.id === id) setSelectedCustomer(null);
-      } catch (e) { toast.error("Gagal menghapus"); }
+        const res = await deleteCustomer(id);
+        if (res.success) {
+          toast.success("Data berhasil dihapus");
+          loadData();
+          if (selectedCustomer?.id === id) setSelectedCustomer(null);
+        } else {
+          toast.error(res.error || "Gagal menghapus data");
+        }
+      } catch (e) { toast.error("Gagal menghapus data"); }
     });
   };
 
