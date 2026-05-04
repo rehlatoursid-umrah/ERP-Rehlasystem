@@ -23,7 +23,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleLogout = async () => {
     // Clear backward compatibility cookie to prevent middleware loop
     document.cookie = "auth_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-    await signOut({ callbackUrl: '/login' });
+    await signOut({ redirect: false });
+    window.location.href = '/login';
   };
 
   const mainMenu = [
