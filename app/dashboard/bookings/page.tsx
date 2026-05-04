@@ -86,8 +86,15 @@ export default function BookingsPage() {
   const handleDelete = (id: string) => {
     if (!confirm("Hapus booking ini?")) return;
     startTransition(async () => {
-      try { await deleteBooking(id); toast.success("Dihapus"); loadData(); }
-      catch { toast.error("Gagal"); }
+      try { 
+        const res = await deleteBooking(id); 
+        if (res.success) {
+          toast.success("Booking berhasil dihapus"); 
+          loadData(); 
+        } else {
+          toast.error(res.error || "Gagal menghapus");
+        }
+      } catch { toast.error("Gagal menghapus"); }
     });
   };
 

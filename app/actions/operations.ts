@@ -147,8 +147,27 @@ export async function updateBookingStatus(id: string, status: string) {
 
 // --- DELETE BOOKING ---
 export async function deleteBooking(id: string) {
-  await db.booking.delete({ where: { id } });
-  return { success: true };
+  try {
+    const booking = await db.booking.findUnique({
+      where: { id },
+      include: { _count: { select: { payments: true } } }
+    });
+
+    if (booking && booking._count.payments > 0) {
+      return { success: false, error: "Gagal: Booking memiliki riwayat pembayaran aktif. Hapus pembayaran terlebih dahulu." };
+    }
+
+    // Hapus invoice yang terhubung (auto-generated)
+    await db.invoice.deleteMany({ where: { bookingId: id } });
+
+    // Hapus booking
+    await db.booking.delete({ where: { id } });
+    
+    return { success: true };
+  } catch (error: any) {
+    console.error("Delete Booking Error:", error);
+    return { success: false, error: "Terjadi kesalahan internal saat menghapus booking." };
+  }
 }
 
 // --- ADD PAYMENT ---
