@@ -19,7 +19,7 @@ export async function POST(request: Request) {
     // Verify booking exists
     const booking = await db.booking.findUnique({
       where: { id: body.bookingId },
-      include: { customer: { select: { phone: true, whatsapp: true } } },
+      include: { customer: { select: { fullName: true, phone: true, whatsapp: true } } },
     });
 
     if (!booking) {
