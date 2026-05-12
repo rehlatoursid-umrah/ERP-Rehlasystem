@@ -43,7 +43,7 @@ export async function POST(request: Request) {
       },
     });
 
-    let booking = null;
+    let booking: any = null;
 
     // If customer also selected a package, create a booking
     if (body.packageId) {
