@@ -30,6 +30,7 @@ export default function PaymentPage() {
   const [lookupForm, setLookupForm] = useState({ bookingCode: '', phone: '' });
   const [booking, setBooking] = useState<BookingData | null>(null);
   const [payForm, setPayForm] = useState({ amount: 0, method: 'TRANSFER', bankName: '', referenceNumber: '', notes: '' });
+  const [proofFile, setProofFile] = useState<File | null>(null);
 
   const fmt = (n: number) => `Rp ${n.toLocaleString('id-ID')}`;
   const fmtDate = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
@@ -53,11 +54,18 @@ export default function PaymentPage() {
   const handlePayment = async () => {
     if (!booking) return;
     if (payForm.amount <= 0) { alert('Jumlah harus lebih dari 0'); return; }
+    if (!proofFile) { alert('Bukti transfer wajib diunggah'); return; }
     setLoading(true);
     try {
+      const formData = new FormData();
+      formData.append('bookingId', booking.id);
+      formData.append('phone', lookupForm.phone);
+      Object.entries(payForm).forEach(([k, v]) => formData.append(k, String(v)));
+      formData.append('proofFile', proofFile);
+
       const res = await fetch('/api/public/payment', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ bookingId: booking.id, phone: lookupForm.phone, ...payForm }),
+        method: 'POST',
+        body: formData,
       });
       const data = await res.json();
       if (data.success) { setMode('success'); }
@@ -210,6 +218,11 @@ export default function PaymentPage() {
                 <div><label className="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">No. Referensi</label><input value={payForm.referenceNumber} onChange={e => setPayForm(f => ({...f, referenceNumber: e.target.value}))} placeholder="Nomor bukti transfer" className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100"/></div>
               </div>
               <div><label className="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">Catatan</label><textarea value={payForm.notes} onChange={e => setPayForm(f => ({...f, notes: e.target.value}))} rows={2} placeholder="Catatan pembayaran..." className="w-full p-3 border border-gray-200 rounded-xl text-sm outline-none focus:border-green-600 focus:ring-2 focus:ring-green-100 resize-y"/></div>
+              
+              <div>
+                <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1.5">Bukti Transfer / Pembayaran *</label>
+                <input type="file" accept="image/*,application/pdf" onChange={e => setProofFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100" />
+              </div>
 
               <div className="bg-amber-50 border border-amber-200 rounded-xl p-3 text-xs text-amber-700">
                 <strong>⚠️ Perhatian:</strong> Pembayaran yang Anda submit akan berstatus <strong>PENDING</strong> dan perlu diverifikasi oleh admin.

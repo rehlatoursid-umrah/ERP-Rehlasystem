@@ -4,21 +4,34 @@ import { db } from '@/app/lib/db';
 // Public API: Customer submits payment update (records a PENDING payment)
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
+    
+    const bookingId = formData.get('bookingId') as string;
+    const amount = Number(formData.get('amount'));
+    const method = formData.get('method') as string;
+    const phoneInput = formData.get('phone') as string;
+    const bankName = formData.get('bankName') as string;
+    const bankAccount = formData.get('bankAccount') as string;
+    const referenceNumber = formData.get('referenceNumber') as string;
+    const notes = formData.get('notes') as string;
+    const proofFile = formData.get('proofFile') as Blob | null;
 
-    if (!body.bookingId) {
+    if (!bookingId) {
       return NextResponse.json({ success: false, error: 'Booking ID wajib diisi' }, { status: 400 });
     }
-    if (!body.amount || body.amount <= 0) {
+    if (!amount || amount <= 0) {
       return NextResponse.json({ success: false, error: 'Jumlah pembayaran harus lebih dari 0' }, { status: 400 });
     }
-    if (!body.method) {
+    if (!method) {
       return NextResponse.json({ success: false, error: 'Metode pembayaran wajib diisi' }, { status: 400 });
+    }
+    if (!proofFile) {
+      return NextResponse.json({ success: false, error: 'Bukti transfer wajib diunggah' }, { status: 400 });
     }
 
     // Verify booking exists
     const booking = await db.booking.findUnique({
-      where: { id: body.bookingId },
+      where: { id: bookingId },
       include: { customer: { select: { fullName: true, phone: true, whatsapp: true } } },
     });
 
@@ -27,8 +40,8 @@ export async function POST(request: Request) {
     }
 
     // Verify phone
-    if (body.phone) {
-      const phone = body.phone.replace(/\D/g, '');
+    if (phoneInput) {
+      const phone = phoneInput.replace(/\D/g, '');
       const custPhone = (booking.customer.phone || '').replace(/\D/g, '');
       const custWa = (booking.customer.whatsapp || '').replace(/\D/g, '');
       if (!custPhone.includes(phone) && !custWa.includes(phone) && !phone.includes(custPhone) && !phone.includes(custWa)) {
@@ -36,17 +49,32 @@ export async function POST(request: Request) {
       }
     }
 
+    // Upload File
+    let proofUrl = null;
+    if (proofFile) {
+      try {
+        const { uploadFileToR2 } = await import('@/app/lib/s3');
+        const buffer = Buffer.from(await proofFile.arrayBuffer());
+        // Use File object's name if available, else generic name
+        const fileName = (proofFile as File).name || 'payment_proof.jpg';
+        proofUrl = await uploadFileToR2(buffer, fileName, proofFile.type || 'image/jpeg', 'payments');
+      } catch (err) {
+        console.error('File upload error:', err);
+        return NextResponse.json({ success: false, error: 'Gagal mengunggah file bukti' }, { status: 500 });
+      }
+    }
+
     // Create payment with PENDING status (admin will verify later)
     const payment = await db.payment.create({
       data: {
-        bookingId: body.bookingId,
-        amount: body.amount,
-        method: body.method || null,
-        bankName: body.bankName?.trim() || null,
-        bankAccount: body.bankAccount?.trim() || null,
-        referenceNumber: body.referenceNumber?.trim() || null,
-        proofUrl: body.proofUrl || null,
-        notes: body.notes?.trim() || `Pembayaran dari customer form`,
+        bookingId: bookingId,
+        amount: amount,
+        method: method || null,
+        bankName: bankName?.trim() || null,
+        bankAccount: bankAccount?.trim() || null,
+        referenceNumber: referenceNumber?.trim() || null,
+        proofUrl: proofUrl,
+        notes: notes?.trim() || `Pembayaran dari customer form`,
         paidAt: new Date(),
         status: 'PENDING', // Admin perlu verifikasi
       },
@@ -55,7 +83,7 @@ export async function POST(request: Request) {
     // Send WhatsApp notification to Admin
     try {
       const { sendAdminNotification } = await import('@/app/lib/whatsapp');
-      const msg = `💰 *Pembayaran Masuk (PENDING)*\n\nBooking: ${booking.bookingCode}\nJamaah: ${booking.customer.fullName}\nJumlah: Rp ${body.amount.toLocaleString('id-ID')}\nMetode: ${body.method || '-'}\n\nSilakan verifikasi di menu Booking Dashboard.`;
+      const msg = `💰 *Pembayaran Masuk (PENDING)*\n\nBooking: ${booking.bookingCode}\nJamaah: ${booking.customer.fullName}\nJumlah: Rp ${amount.toLocaleString('id-ID')}\nMetode: ${method || '-'}\n\nSilakan verifikasi di menu Booking Dashboard.`;
       await sendAdminNotification(msg);
     } catch (e) {
       console.error('Failed to send admin notification:', e);

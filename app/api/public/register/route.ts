@@ -4,7 +4,8 @@ import { db } from '@/app/lib/db';
 // Public API: Customer self-registration + optional booking
 export async function POST(request: Request) {
   try {
-    const body = await request.json();
+    const formData = await request.formData();
+    const body = Object.fromEntries(formData.entries()) as Record<string, any>;
 
     // Validate required fields
     if (!body.fullName?.trim()) {
@@ -12,6 +13,25 @@ export async function POST(request: Request) {
     }
     if (!body.phone?.trim()) {
       return NextResponse.json({ success: false, error: 'Nomor HP wajib diisi' }, { status: 400 });
+    }
+
+    const ktpFile = formData.get('ktpFile') as Blob | null;
+    const passportFile = formData.get('passportFile') as Blob | null;
+
+    let ktpUrl = null;
+    let passportUrl = null;
+
+    try {
+      const { uploadFileToR2 } = await import('@/app/lib/s3');
+      if (ktpFile) {
+        ktpUrl = await uploadFileToR2(Buffer.from(await ktpFile.arrayBuffer()), (ktpFile as File).name || 'ktp.jpg', ktpFile.type || 'image/jpeg', 'documents');
+      }
+      if (passportFile) {
+        passportUrl = await uploadFileToR2(Buffer.from(await passportFile.arrayBuffer()), (passportFile as File).name || 'passport.jpg', passportFile.type || 'image/jpeg', 'documents');
+      }
+    } catch (err) {
+      console.error('File upload error:', err);
+      return NextResponse.json({ success: false, error: 'Gagal mengunggah dokumen' }, { status: 500 });
     }
 
     // Create customer
@@ -32,9 +52,10 @@ export async function POST(request: Request) {
         passportNumber: body.passportNumber?.trim() || null,
         passportExpiry: body.passportExpiry ? new Date(body.passportExpiry) : null,
         passportIssued: body.passportIssued ? new Date(body.passportIssued) : null,
+        passportPhoto: passportUrl,
         bloodType: body.bloodType || null,
         healthNotes: body.healthNotes?.trim() || null,
-        vaccineMeningitis: body.vaccineMeningitis || false,
+        vaccineMeningitis: body.vaccineMeningitis === 'true',
         vaccineDate: body.vaccineDate ? new Date(body.vaccineDate) : null,
         emergencyName: body.emergencyName?.trim() || null,
         emergencyPhone: body.emergencyPhone?.trim() || null,
@@ -42,6 +63,30 @@ export async function POST(request: Request) {
         notes: body.notes?.trim() || null,
       },
     });
+
+    // Save KTP to Document table
+    if (ktpUrl) {
+      await db.document.create({
+        data: {
+          customerId: customer.id,
+          category: 'KTP',
+          fileName: (ktpFile as File)?.name || 'KTP',
+          fileUrl: ktpUrl,
+        }
+      });
+    }
+
+    // Save Passport to Document table (also saved in Customer.passportPhoto)
+    if (passportUrl) {
+      await db.document.create({
+        data: {
+          customerId: customer.id,
+          category: 'PASSPORT',
+          fileName: (passportFile as File)?.name || 'Passport',
+          fileUrl: passportUrl,
+        }
+      });
+    }
 
     let booking: any = null;
 

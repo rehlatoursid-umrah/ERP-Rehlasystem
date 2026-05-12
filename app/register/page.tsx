@@ -12,7 +12,7 @@ type Package = {
   coverImage: string | null;
 };
 
-const STEPS = ['Data Diri', 'Kontak', 'Paspor', 'Kesehatan', 'Pilih Paket', 'Konfirmasi'];
+const STEPS = ['Data Diri', 'Kontak', 'Dokumen', 'Kesehatan', 'Pilih Paket', 'Konfirmasi'];
 
 export default function RegisterPage() {
   const [step, setStep] = useState(0);
@@ -20,6 +20,8 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [ktpFile, setKtpFile] = useState<File | null>(null);
+  const [passportFile, setPassportFile] = useState<File | null>(null);
 
   const [form, setForm] = useState({
     fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '',
@@ -49,15 +51,23 @@ export default function RegisterPage() {
   const validate = () => {
     if (step === 0 && !form.fullName.trim()) { alert('Nama lengkap wajib diisi'); return false; }
     if (step === 1 && !form.phone.trim()) { alert('Nomor HP wajib diisi'); return false; }
+    if (step === 2 && !ktpFile) { alert('Foto KTP wajib diunggah'); return false; }
     return true;
   };
 
   const handleSubmit = async () => {
     setLoading(true);
     try {
+      const formData = new FormData();
+      Object.entries(form).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) formData.append(k, String(v));
+      });
+      if (ktpFile) formData.append('ktpFile', ktpFile);
+      if (passportFile) formData.append('passportFile', passportFile);
+
       const res = await fetch('/api/public/register', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(form),
+        method: 'POST',
+        body: formData,
       });
       const data = await res.json();
       if (data.success) {
@@ -168,15 +178,31 @@ export default function RegisterPage() {
               </div>
             )}
 
-            {/* Step 2: Paspor */}
+            {/* Step 2: Dokumen */}
             {step === 2 && (
               <div className="space-y-5 animate-[fadeIn_0.3s_ease]">
-                <div className="flex items-center gap-2 mb-4"><FileText className="text-[#a77a0b]" size={22}/><h3 className="font-bold text-[#3a0519] text-lg">Data Paspor</h3></div>
-                <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg">Opsional — bisa dilengkapi nanti. Jika sudah punya paspor, isi data di bawah.</p>
-                <Field label="Nomor Paspor" value={form.passportNumber} onChange={v => set('passportNumber', v)} placeholder="A 1234567" />
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Tanggal Terbit" type="date" value={form.passportIssued} onChange={v => set('passportIssued', v)} />
-                  <Field label="Berlaku s/d" type="date" value={form.passportExpiry} onChange={v => set('passportExpiry', v)} />
+                <div className="flex items-center gap-2 mb-4"><FileText className="text-[#a77a0b]" size={22}/><h3 className="font-bold text-[#3a0519] text-lg">Dokumen Pribadi</h3></div>
+                
+                <div className="bg-gray-50 p-4 rounded-xl space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Foto KTP *</label>
+                    <input type="file" accept="image/*" onChange={e => setKtpFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#a77a0b]/10 file:text-[#a77a0b] hover:file:bg-[#a77a0b]/20" />
+                  </div>
+                </div>
+
+                <div className="border-t pt-5 mt-5">
+                  <p className="text-xs text-gray-400 bg-gray-50 p-3 rounded-lg mb-4">Opsional — bisa dilengkapi nanti. Jika sudah punya paspor, isi data di bawah.</p>
+                  <div className="space-y-4">
+                    <Field label="Nomor Paspor" value={form.passportNumber} onChange={v => set('passportNumber', v)} placeholder="A 1234567" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Tanggal Terbit" type="date" value={form.passportIssued} onChange={v => set('passportIssued', v)} />
+                      <Field label="Berlaku s/d" type="date" value={form.passportExpiry} onChange={v => set('passportExpiry', v)} />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-bold text-gray-500 uppercase mb-1.5 tracking-wide">Foto Paspor</label>
+                      <input type="file" accept="image/*" onChange={e => setPassportFile(e.target.files?.[0] || null)} className="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#a77a0b]/10 file:text-[#a77a0b] hover:file:bg-[#a77a0b]/20" />
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
