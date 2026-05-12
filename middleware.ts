@@ -9,6 +9,12 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  // Public routes - no auth required
+  const publicRoutes = ['/register', '/payment', '/api/public'];
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.next();
+  }
+
   // Check for auth session token (NextAuth sets this cookie)
   const sessionToken = request.cookies.get('authjs.session-token') 
     || request.cookies.get('__Secure-authjs.session-token')
@@ -40,5 +46,8 @@ export const config = {
     '/',
     '/dashboard/:path*',
     '/login',
+    '/register',
+    '/payment',
+    '/api/public/:path*',
   ],
 };
