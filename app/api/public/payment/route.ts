@@ -52,6 +52,15 @@ export async function POST(request: Request) {
       },
     });
 
+    // Send WhatsApp notification to Admin
+    try {
+      const { sendAdminNotification } = await import('@/app/lib/whatsapp');
+      const msg = `💰 *Pembayaran Masuk (PENDING)*\n\nBooking: ${booking.bookingCode}\nJamaah: ${booking.customer.fullName}\nJumlah: Rp ${body.amount.toLocaleString('id-ID')}\nMetode: ${body.method || '-'}\n\nSilakan verifikasi di menu Booking Dashboard.`;
+      await sendAdminNotification(msg);
+    } catch (e) {
+      console.error('Failed to send admin notification:', e);
+    }
+
     return NextResponse.json({
       success: true,
       message: 'Pembayaran berhasil dicatat! Menunggu verifikasi admin.',

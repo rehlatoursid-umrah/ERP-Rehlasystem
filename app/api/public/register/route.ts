@@ -87,6 +87,15 @@ export async function POST(request: Request) {
       }
     }
 
+    // Send WhatsApp notification to Admin
+    try {
+      const { sendAdminNotification } = await import('@/app/lib/whatsapp');
+      const msg = `📢 *Pendaftaran Baru!*\n\nNama: ${customer.fullName}\nHP: ${customer.phone}${booking ? `\n\n📝 *Booking Baru:*\nKode: ${booking.bookingCode}\nTotal: Rp ${booking.priceTotal.toLocaleString('id-ID')}` : ''}\n\nMohon cek di dashboard CRM.`;
+      await sendAdminNotification(msg);
+    } catch (e) {
+      console.error('Failed to send admin notification:', e);
+    }
+
     return NextResponse.json({
       success: true,
       customerId: customer.id,
