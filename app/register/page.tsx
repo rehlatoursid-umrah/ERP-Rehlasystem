@@ -166,8 +166,8 @@ export default function RegisterPage() {
               <div className="space-y-5 animate-[fadeIn_0.3s_ease]">
                 <div className="flex items-center gap-2 mb-4"><Phone className="text-[#a77a0b]" size={22}/><h3 className="font-bold text-[#3a0519] text-lg">Informasi Kontak</h3></div>
                 <div className="grid grid-cols-2 gap-4">
-                  <Field label="No. HP *" value={form.phone} onChange={v => set('phone', v)} placeholder="08xxxxxxxxxx" />
-                  <Field label="WhatsApp" value={form.whatsapp} onChange={v => set('whatsapp', v)} placeholder="08xxxxxxxxxx" />
+                  <Field label="No. HP *" value={form.phone} onChange={v => set('phone', v)} placeholder="+628xxxxxxxxxx" />
+                  <Field label="WhatsApp" value={form.whatsapp} onChange={v => set('whatsapp', v)} placeholder="+628xxxxxxxxxx" />
                 </div>
                 <Field label="Email" type="email" value={form.email} onChange={v => set('email', v)} placeholder="email@contoh.com" />
                 <Field label="Alamat Lengkap" value={form.address} onChange={v => set('address', v)} textarea />

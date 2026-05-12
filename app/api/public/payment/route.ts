@@ -50,7 +50,7 @@ export async function POST(request: Request) {
     }
 
     // Upload File
-    let proofUrl = null;
+    let proofUrl: string | null = null;
     if (proofFile) {
       try {
         const { uploadFileToR2 } = await import('@/app/lib/s3');

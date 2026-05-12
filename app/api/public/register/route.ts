@@ -18,8 +18,8 @@ export async function POST(request: Request) {
     const ktpFile = formData.get('ktpFile') as Blob | null;
     const passportFile = formData.get('passportFile') as Blob | null;
 
-    let ktpUrl = null;
-    let passportUrl = null;
+    let ktpUrl: string | null = null;
+    let passportUrl: string | null = null;
 
     try {
       const { uploadFileToR2 } = await import('@/app/lib/s3');
