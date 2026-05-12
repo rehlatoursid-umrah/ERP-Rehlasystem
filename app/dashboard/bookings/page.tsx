@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useTransition } from 'react';
 import { ClipboardList, Plus, Trash2, X, Loader2, CreditCard, DollarSign, CheckCircle, XCircle, Clock, AlertTriangle, Check } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-import { getBookings, createBooking, updateBookingStatus, deleteBooking, addPayment, getPackages, getPendingPayments, verifyPayment, rejectPayment } from '@/app/actions/operations';
+import { getBookings, createBooking, updateBookingStatus, deleteBooking, addPayment, getPackages, getPendingPayments, verifyPayment, rejectPayment, deletePayment } from '@/app/actions/operations';
 import { getCustomers } from '@/app/actions/customers';
 import { Input, Textarea, Select } from '@/app/components/ui/Input';
 import { Button } from '@/app/components/ui/Button';
@@ -122,6 +122,17 @@ export default function BookingsPage() {
         if (res.success) { toast.success("Booking berhasil dihapus"); loadData(); }
         else toast.error(res.error || "Gagal menghapus");
       } catch { toast.error("Gagal menghapus"); }
+    });
+  };
+
+  const handleDeletePayment = (paymentId: string) => {
+    if (!confirm("Hapus histori pembayaran ini? Saldo terbayar akan berkurang dan tagihan mungkin kembali menjadi belum lunas. Lanjutkan?")) return;
+    startTransition(async () => {
+      try {
+        const res = await deletePayment(paymentId);
+        if (res.success) { toast.success("Pembayaran berhasil dihapus"); loadData(); }
+        else toast.error(res.error || "Gagal menghapus pembayaran");
+      } catch { toast.error("Gagal menghapus pembayaran"); }
     });
   };
 
@@ -265,7 +276,12 @@ export default function BookingsPage() {
                                 {p.bankName && <span className="text-gray-400">• {p.bankName}</span>}
                                 {p.referenceNumber && <span className="text-gray-400 font-mono">#{p.referenceNumber}</span>}
                               </div>
-                              <span className="font-bold text-green-600">+{fmt(p.amount)}</span>
+                              <div className="flex items-center gap-3">
+                                <span className="font-bold text-green-600">+{fmt(p.amount)}</span>
+                                <button onClick={(e) => { e.stopPropagation(); handleDeletePayment(p.id); }} className="text-gray-400 hover:text-red-600 p-1.5 rounded-lg hover:bg-red-50 transition" title="Hapus Pembayaran">
+                                  <Trash2 size={14}/>
+                                </button>
+                              </div>
                             </div>
                           );
                         })}

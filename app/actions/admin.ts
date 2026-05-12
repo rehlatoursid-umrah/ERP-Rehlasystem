@@ -287,6 +287,21 @@ export async function deleteInvoice(id: string) {
   return { success: true };
 }
 
+// --- Get payment for Kwitansi ---
+export async function getPaymentForKwitansi(id: string) {
+  return db.payment.findUnique({
+    where: { id },
+    include: {
+      booking: {
+        include: {
+          customer: true,
+          package: true,
+        }
+      }
+    }
+  });
+}
+
 // ============================================
 // DEPARTURE (GROUP KEBERANGKATAN)
 // ============================================

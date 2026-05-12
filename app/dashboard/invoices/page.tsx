@@ -4,7 +4,7 @@ import React, { useState, useEffect, useTransition } from 'react';
 import {
   Receipt, Trash2, X, Loader2, DollarSign, ChevronDown, CheckCircle,
   Clock, AlertTriangle, Send, Search, Filter, FileText, Edit3, Ban,
-  CreditCard, Eye
+  CreditCard, Eye, Printer
 } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import {
@@ -306,11 +306,18 @@ export default function InvoicesPage() {
                                     {p.referenceNumber && <span className="text-gray-400 font-mono"> #{p.referenceNumber}</span>}
                                     <p className="text-[10px] text-gray-400 mt-0.5">{fmtDate(p.paidAt || p.createdAt)}</p>
                                   </div>
-                                  <div className="text-right">
-                                    <span className="font-bold text-green-600">+{fmt(p.amount)}</span>
-                                    <p className="text-[10px] mt-0.5">
-                                      <Badge variant={p.status === 'VERIFIED' ? 'success' : p.status === 'REJECTED' ? 'danger' : 'default'} size="sm">{p.status}</Badge>
-                                    </p>
+                                  <div className="text-right flex items-center gap-3">
+                                    <div>
+                                      <span className="font-bold text-green-600">+{fmt(p.amount)}</span>
+                                      <p className="text-[10px] mt-0.5">
+                                        <Badge variant={p.status === 'VERIFIED' ? 'success' : p.status === 'REJECTED' ? 'danger' : 'default'} size="sm">{p.status}</Badge>
+                                      </p>
+                                    </div>
+                                    {p.status === 'VERIFIED' && (
+                                      <a href={`/dashboard/kwitansi/${p.id}`} target="_blank" className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Cetak Kwitansi">
+                                        <Printer size={14} />
+                                      </a>
+                                    )}
                                   </div>
                                 </div>
                               ))}

@@ -288,3 +288,39 @@ export async function rejectPayment(paymentId: string, reason?: string) {
 
   return { success: true };
 }
+
+// --- DELETE PAYMENT ---
+export async function deletePayment(paymentId: string) {
+  const payment = await db.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) return { success: false, error: 'Payment tidak ditemukan' };
+
+  // Hapus payment
+  await db.payment.delete({ where: { id: paymentId } });
+
+  // Update booking if needed
+  const booking = await db.booking.findUnique({
+    where: { id: payment.bookingId },
+    include: { payments: { where: { status: 'VERIFIED' } } }
+  });
+
+  if (booking) {
+    const totalPaid = booking.payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0);
+    const remaining = booking.priceTotal - totalPaid;
+    const newStatus = remaining <= 0 ? 'FULLY_PAID' : totalPaid > 0 ? 'DP_PAID' : (booking.status === 'FULLY_PAID' || booking.status === 'DP_PAID' ? 'PENDING' : booking.status);
+
+    await db.booking.update({
+      where: { id: payment.bookingId },
+      data: { paidAmount: totalPaid, remainingAmount: Math.max(0, remaining), status: newStatus }
+    });
+
+    // Auto-sync invoice with payment data
+    try {
+      const { syncInvoiceWithPayments } = await import('@/app/actions/admin');
+      await syncInvoiceWithPayments(payment.bookingId);
+    } catch (e) {
+      console.error('Invoice sync failed:', e);
+    }
+  }
+
+  return { success: true };
+}
