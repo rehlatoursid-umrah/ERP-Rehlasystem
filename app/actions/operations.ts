@@ -214,3 +214,77 @@ export async function addPayment(data: {
 
   return payment;
 }
+
+// --- GET PENDING PAYMENTS (from customer submissions) ---
+export async function getPendingPayments() {
+  return db.payment.findMany({
+    where: { status: 'PENDING' },
+    orderBy: { createdAt: 'desc' },
+    include: {
+      booking: {
+        include: {
+          customer: { select: { id: true, fullName: true, phone: true, whatsapp: true } },
+          package: { select: { name: true } },
+        }
+      }
+    }
+  });
+}
+
+// --- VERIFY PAYMENT (admin approves customer payment) ---
+export async function verifyPayment(paymentId: string) {
+  const payment = await db.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw new Error('Payment tidak ditemukan');
+  if (payment.status !== 'PENDING') throw new Error('Payment sudah diproses');
+
+  // Update payment status
+  await db.payment.update({
+    where: { id: paymentId },
+    data: { status: 'VERIFIED', verifiedAt: new Date() },
+  });
+
+  // Recalculate booking amounts
+  const booking = await db.booking.findUnique({
+    where: { id: payment.bookingId },
+    include: { payments: { where: { status: 'VERIFIED' } } },
+  });
+
+  if (booking) {
+    const totalPaid = booking.payments.reduce((s: number, p: { amount: number }) => s + p.amount, 0);
+    const remaining = booking.priceTotal - totalPaid;
+    const newStatus = remaining <= 0 ? 'FULLY_PAID' : totalPaid > 0 ? 'DP_PAID' : booking.status;
+
+    await db.booking.update({
+      where: { id: payment.bookingId },
+      data: { paidAmount: totalPaid, remainingAmount: Math.max(0, remaining), status: newStatus },
+    });
+  }
+
+  // Sync invoice
+  try {
+    const { syncInvoiceWithPayments } = await import('@/app/actions/admin');
+    await syncInvoiceWithPayments(payment.bookingId);
+  } catch (e) {
+    console.error('Invoice sync failed:', e);
+  }
+
+  return { success: true };
+}
+
+// --- REJECT PAYMENT (admin rejects customer payment) ---
+export async function rejectPayment(paymentId: string, reason?: string) {
+  const payment = await db.payment.findUnique({ where: { id: paymentId } });
+  if (!payment) throw new Error('Payment tidak ditemukan');
+  if (payment.status !== 'PENDING') throw new Error('Payment sudah diproses');
+
+  await db.payment.update({
+    where: { id: paymentId },
+    data: { 
+      status: 'REJECTED', 
+      verifiedAt: new Date(),
+      notes: reason ? `${payment.notes || ''} | DITOLAK: ${reason}`.trim() : payment.notes,
+    },
+  });
+
+  return { success: true };
+}
