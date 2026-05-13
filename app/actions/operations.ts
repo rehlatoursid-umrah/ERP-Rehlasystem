@@ -113,9 +113,22 @@ export async function createBooking(data: {
   customerId: string; packageId?: string; roomType?: string;
   priceTotal: number; currency?: string; notes?: string;
 }) {
-  const count = await db.booking.count();
   const year = new Date().getFullYear();
-  const bookingCode = `BK-${year}-${String(count + 1).padStart(4, '0')}`;
+  const count = await db.booking.count();
+  let bookingCode = `BK-${year}-${String(count + 1).padStart(4, '0')}`;
+  
+  // Ensure uniqueness
+  let isUnique = false;
+  let attempt = 1;
+  while (!isUnique) {
+    const existing = await db.booking.findUnique({ where: { bookingCode } });
+    if (!existing) {
+      isUnique = true;
+    } else {
+      bookingCode = `BK-${year}-${String(count + 1 + attempt).padStart(4, '0')}`;
+      attempt++;
+    }
+  }
 
   const booking = await db.booking.create({
     data: {
