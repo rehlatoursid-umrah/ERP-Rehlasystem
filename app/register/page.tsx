@@ -90,9 +90,9 @@ export default function RegisterPage() {
   if (submitted && result) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
-        <div className="bg-white rounded-xl shadow-md border border-gray-200 max-w-lg w-full p-8 text-center">
-          <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center mx-auto mb-6">
-            <Check size={32} className="text-green-600" />
+        <div className="bg-white rounded-xl shadow-md border border-[#3a0519]/20 max-w-lg w-full p-8 text-center">
+          <div className="w-16 h-16 bg-[#3a0519]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+            <Check size={32} className="text-[#3a0519]" />
           </div>
           <h2 className="text-2xl font-bold text-gray-900 mb-2">Pendaftaran Berhasil</h2>
           <p className="text-gray-500 mb-8">Terima kasih, <strong className="text-gray-900">{result.customerName}</strong></p>
@@ -108,11 +108,11 @@ export default function RegisterPage() {
             </div>
           )}
           
-          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4 mb-8 text-left flex gap-3 items-start">
-            <Shield size={18} className="text-blue-600 mt-0.5" />
+          <div className="bg-[#3a0519]/5 border border-[#3a0519]/20 rounded-lg p-4 mb-8 text-left flex gap-3 items-start">
+            <Shield size={18} className="text-[#3a0519] mt-0.5" />
             <div>
-              <p className="text-sm font-semibold text-blue-900 mb-1">Simpan Kode Booking</p>
-              <p className="text-sm text-blue-800">Gunakan kode ini untuk mengupdate bukti pembayaran di halaman <strong>/payment</strong>.</p>
+              <p className="text-sm font-semibold text-[#3a0519] mb-1">Simpan Kode Booking</p>
+              <p className="text-sm text-gray-700">Gunakan kode ini untuk mengupdate bukti pembayaran di halaman <strong>/payment</strong>.</p>
             </div>
           </div>
           
@@ -153,11 +153,11 @@ export default function RegisterPage() {
                 return (
                   <div key={i} className="flex gap-4">
                     <div className="relative flex flex-col items-center">
-                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center bg-white z-10 transition-colors ${isActive ? 'border-[#3a0519] text-[#3a0519]' : isPast ? 'border-green-500 text-green-500' : 'border-gray-200 text-gray-300'}`}>
+                      <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center bg-white z-10 transition-colors ${isActive ? 'border-[#3a0519] text-[#3a0519] bg-[#3a0519]/5' : isPast ? 'border-[#3a0519] bg-[#3a0519] text-white' : 'border-gray-200 text-gray-300'}`}>
                         {isPast ? <Check size={14} strokeWidth={3} /> : <Icon size={14} />}
                       </div>
                       {i !== STEPS.length - 1 && (
-                        <div className={`w-0.5 h-full absolute top-8 bottom-0 -mb-6 ${isPast ? 'bg-green-500' : 'bg-gray-200'}`} />
+                        <div className={`w-0.5 h-full absolute top-8 bottom-0 -mb-6 ${isPast ? 'bg-[#3a0519]' : 'bg-gray-200'}`} />
                       )}
                     </div>
                     <div className="pt-1.5 pb-4">
@@ -176,7 +176,7 @@ export default function RegisterPage() {
           <p className="text-xs font-semibold text-gray-500 uppercase">Langkah {step + 1} dari {STEPS.length}</p>
           <div className="flex gap-1 h-1.5">
             {STEPS.map((_, i) => (
-              <div key={i} className={`flex-1 rounded-full ${i < step ? 'bg-green-500' : i === step ? 'bg-[#3a0519]' : 'bg-gray-200'}`} />
+              <div key={i} className={`flex-1 rounded-full ${i <= step ? 'bg-[#3a0519]' : 'bg-gray-200'}`} />
             ))}
           </div>
           <h2 className="text-xl font-bold text-gray-900 mt-2">{STEPS[step].id}</h2>
