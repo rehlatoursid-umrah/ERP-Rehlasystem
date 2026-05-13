@@ -154,7 +154,7 @@ export default function RegisterPage() {
                 return (
                   <div key={i} className="flex group cursor-pointer" onClick={() => { if (i < step) setStep(i); }}>
                     <div className="relative flex flex-col items-center px-4">
-                      <div className={`w-10 h-10 rounded-xl border-2 flex items-center justify-center bg-white z-10 transition-all duration-300 ${isActive ? 'border-[#3a0519] bg-[#3a0519] text-white shadow-lg shadow-[#3a0519]/20 scale-110' : isPast ? 'border-[#3a0519] text-[#3a0519] bg-[#3a0519]/5' : 'border-gray-200 text-gray-400 group-hover:border-gray-300'}`}>
+                      <div className={`w-10 h-10 rounded-full border-2 flex items-center justify-center z-10 transition-all duration-300 ${isActive ? 'border-[#3a0519] bg-[#3a0519] text-white shadow-lg shadow-[#3a0519]/20 scale-110' : isPast ? 'border-[#3a0519] text-[#3a0519] bg-[#3a0519]/5' : 'bg-white border-gray-200 text-gray-400 group-hover:border-gray-300'}`}>
                         {isPast ? <Check size={18} strokeWidth={3} /> : <Icon size={18} className={isActive ? 'text-white' : ''} />}
                       </div>
                       {i !== STEPS.length - 1 && (
