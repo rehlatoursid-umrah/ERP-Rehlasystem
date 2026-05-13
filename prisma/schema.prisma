@@ -109,6 +109,7 @@ model Package {
   priceTriple     Float     @default(0)
   priceDouble     Float     @default(0)
   priceSingle     Float     @default(0)
+  priceOriginal   Float?    // Original price before discount (for display)
   currency        String    @default("IDR")
   // Duration
   durationDays    Int       @default(9)
@@ -126,6 +127,15 @@ model Package {
   coverImage      String?
   galleryImages   String?   // JSON array of image URLs
   brochureUrl     String?
+  // Website Display Fields
+  badge           String?   // e.g. "Best Seller", "Hemat", "Premium"
+  highlights      String?   // JSON array of highlight strings
+  rating          Float?    @default(0)
+  reviewCount     Int?      @default(0)
+  isPopular       Boolean   @default(false)
+  isBestSeller    Boolean   @default(false)
+  groupSizeMin    Int?      @default(15)
+  groupSizeMax    Int?      @default(45)
   // Meta
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt

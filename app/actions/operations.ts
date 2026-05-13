@@ -60,9 +60,11 @@ export async function getPackages() {
 export async function createPackage(data: {
   name: string; type?: string; description?: string; status?: string;
   priceQuad?: number; priceTriple?: number; priceDouble?: number; priceSingle?: number;
-  currency?: string; durationDays?: number; durationNights?: number;
+  priceOriginal?: number; currency?: string; durationDays?: number; durationNights?: number;
   includes?: string; excludes?: string; hotelMakkah?: string; hotelMadinah?: string;
   airline?: string; coverImage?: string;
+  badge?: string; highlights?: string; rating?: number; reviewCount?: number;
+  isPopular?: boolean; isBestSeller?: boolean; groupSizeMin?: number; groupSizeMax?: number;
 }) {
   const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
   return db.package.create({
@@ -72,11 +74,16 @@ export async function createPackage(data: {
       status: data.status || 'DRAFT',
       priceQuad: data.priceQuad || 0, priceTriple: data.priceTriple || 0,
       priceDouble: data.priceDouble || 0, priceSingle: data.priceSingle || 0,
+      priceOriginal: data.priceOriginal || null,
       currency: data.currency || 'IDR',
       durationDays: data.durationDays || 9, durationNights: data.durationNights || 7,
       includes: data.includes || null, excludes: data.excludes || null,
       hotelMakkah: data.hotelMakkah || null, hotelMadinah: data.hotelMadinah || null,
       airline: data.airline || null, coverImage: data.coverImage || null,
+      badge: data.badge || null, highlights: data.highlights || null,
+      rating: data.rating || 0, reviewCount: data.reviewCount || 0,
+      isPopular: data.isPopular || false, isBestSeller: data.isBestSeller || false,
+      groupSizeMin: data.groupSizeMin || 15, groupSizeMax: data.groupSizeMax || 45,
     }
   });
 }

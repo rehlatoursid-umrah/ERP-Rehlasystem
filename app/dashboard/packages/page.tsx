@@ -30,9 +30,11 @@ export default function PackagesPage() {
 
   const emptyForm = {
     name: '', type: 'REGULAR', description: '', status: 'DRAFT',
-    priceQuad: 0, priceTriple: 0, priceDouble: 0, priceSingle: 0, currency: 'IDR',
+    priceQuad: 0, priceTriple: 0, priceDouble: 0, priceSingle: 0, priceOriginal: 0, currency: 'IDR',
     durationDays: 9, durationNights: 7, includes: '', excludes: '',
     hotelMakkah: '', hotelMadinah: '', airline: '', coverImage: '',
+    badge: '', highlights: '', rating: 0, reviewCount: 0,
+    isPopular: false, isBestSeller: false, groupSizeMin: 15, groupSizeMax: 45,
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -48,10 +50,15 @@ export default function PackagesPage() {
     setForm({
       name: p.name, type: p.type, description: p.description || '', status: p.status,
       priceQuad: p.priceQuad, priceTriple: p.priceTriple, priceDouble: p.priceDouble, priceSingle: p.priceSingle,
+      priceOriginal: (p as any).priceOriginal || 0,
       currency: p.currency, durationDays: p.durationDays, durationNights: p.durationNights,
       includes: p.includes || '', excludes: p.excludes || '',
       hotelMakkah: p.hotelMakkah || '', hotelMadinah: p.hotelMadinah || '',
       airline: p.airline || '', coverImage: p.coverImage || '',
+      badge: (p as any).badge || '', highlights: (p as any).highlights || '',
+      rating: (p as any).rating || 0, reviewCount: (p as any).reviewCount || 0,
+      isPopular: (p as any).isPopular || false, isBestSeller: (p as any).isBestSeller || false,
+      groupSizeMin: (p as any).groupSizeMin || 15, groupSizeMax: (p as any).groupSizeMax || 45,
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -178,6 +185,31 @@ export default function PackagesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Textarea label="Include" value={form.includes} onChange={e => setForm({...form, includes: e.target.value})} rows={3} />
                 <Textarea label="Exclude" value={form.excludes} onChange={e => setForm({...form, excludes: e.target.value})} rows={3} />
+              </div>
+
+              <p className="text-xs font-bold text-[#a77a0b] uppercase mt-4">Website Display (Tampilan di Website Publik)</p>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                <Input label="Badge Label" value={form.badge} onChange={e => setForm({...form, badge: e.target.value})} placeholder="Best Seller, Hemat, Premium" />
+                <Input type="number" label="Rating (0-5)" value={form.rating||''} onChange={e => setForm({...form, rating: +e.target.value})} />
+                <Input type="number" label="Jumlah Review" value={form.reviewCount||''} onChange={e => setForm({...form, reviewCount: +e.target.value})} />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <Input type="number" label="Harga Asli (coret)" value={form.priceOriginal||''} onChange={e => setForm({...form, priceOriginal: +e.target.value})} placeholder="Harga sebelum diskon" />
+                <div className="grid grid-cols-2 gap-3">
+                  <Input type="number" label="Min Grup" value={form.groupSizeMin||''} onChange={e => setForm({...form, groupSizeMin: +e.target.value})} />
+                  <Input type="number" label="Max Grup" value={form.groupSizeMax||''} onChange={e => setForm({...form, groupSizeMax: +e.target.value})} />
+                </div>
+              </div>
+              <Textarea label="Highlights (satu per baris)" value={form.highlights} onChange={e => setForm({...form, highlights: e.target.value})} rows={4} placeholder={"Hotel dekat Masjidil Haram\nMakan 3x sehari\nBimbingan manasik lengkap"} />
+              <div className="flex gap-4">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.isPopular} onChange={e => setForm({...form, isPopular: e.target.checked})} className="accent-[#3a0519]" />
+                  <span className="text-sm font-medium">Popular</span>
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input type="checkbox" checked={form.isBestSeller} onChange={e => setForm({...form, isBestSeller: e.target.checked})} className="accent-[#3a0519]" />
+                  <span className="text-sm font-medium">Best Seller</span>
+                </label>
               </div>
             </div>
             <div className="p-6 border-t bg-gray-50 rounded-b-2xl flex gap-3 justify-end">
