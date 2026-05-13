@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { User, Phone, MapPin, FileText, Heart, ChevronRight, ChevronLeft, Check, Loader2, Star, Calendar, Building2, Plane, Sparkles, CheckCircle2, AlertCircle } from 'lucide-react';
+import { User, Phone, MapPin, FileText, Heart, ChevronRight, ChevronLeft, Check, Loader2, Star, Calendar, Building2, Plane, Sparkles, CheckCircle2, AlertCircle, Shield } from 'lucide-react';
 
 type Package = {
   id: string; name: string; type: string; description: string | null;
