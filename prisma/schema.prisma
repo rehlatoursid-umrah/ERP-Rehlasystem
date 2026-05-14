@@ -380,3 +380,21 @@ model Setting {
   value String
   group String @default("general") // general, whatsapp, branding, finance
 }
+
+// ============================================
+// 14. TESTIMONIALS (Website Integration)
+// ============================================
+
+model Testimonial {
+  id          String   @id @default(uuid())
+  name        String
+  location    String
+  rating      Int      @default(5)
+  content     String
+  avatarUrl   String?
+  packageName String?
+  isActive    Boolean  @default(true)
+  sortOrder   Int      @default(0)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
