@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { prisma } from '@/app/lib/db'
+import { db as prisma } from '@/app/lib/db'
 
 // GET all testimonials (admin)
 export async function GET() {
