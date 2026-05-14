@@ -6,7 +6,7 @@ import { signOut } from 'next-auth/react';
 import { 
   FileText, Building2, LogOut, LayoutDashboard, Menu, Plane, MapPin, 
   Users, Wallet, X, ChevronDown, Package, ClipboardList, Truck,
-  CalendarCheck, Shield, Settings, Receipt
+  CalendarCheck, Shield, Settings, Receipt, MessageSquareQuote
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -39,6 +39,10 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     { name: 'Invoice', href: '/dashboard/invoices', icon: <Receipt size={18}/> },
     { name: 'Keberangkatan', href: '/dashboard/departures', icon: <CalendarCheck size={18}/> },
     { name: 'Supplier', href: '/dashboard/suppliers', icon: <Truck size={18}/> },
+  ];
+
+  const websiteMenu = [
+    { name: 'Cerita Jamaah', href: '/dashboard/testimonials', icon: <MessageSquareQuote size={18}/> },
   ];
 
   const adminMenu = [
@@ -117,6 +121,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               </div>
             )}
 
+            {/* Website */}
+            <p className="px-3 pt-5 pb-1 text-[10px] font-bold text-gray-300 uppercase tracking-wider">Website</p>
+            {websiteMenu.map((item) => (
+              <Link key={item.href} href={item.href} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl text-sm font-medium transition-all ${pathname === item.href ? 'bg-[#3a0519] text-white shadow-md' : 'text-gray-500 hover:bg-gray-50 hover:text-[#3a0519]'}`}>
+                {item.icon} {item.name}
+              </Link>
+            ))}
+
             {/* Admin */}
             <p className="px-3 pt-5 pb-1 text-[10px] font-bold text-gray-300 uppercase tracking-wider">Administrasi</p>
             {adminMenu.map((item) => (
@@ -162,6 +174,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             ))}
             <p className="px-3 pt-4 pb-1 text-[10px] font-bold text-gray-300 uppercase tracking-wider">Generator Tools</p>
             {generatorMenu.map((item) => (
+                <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${pathname === item.href ? 'bg-[#3a0519] text-white' : 'text-gray-500'}`}>
+                    {item.icon} {item.name}
+                </Link>
+            ))}
+            <p className="px-3 pt-4 pb-1 text-[10px] font-bold text-gray-300 uppercase tracking-wider">Website</p>
+            {websiteMenu.map((item) => (
                 <Link key={item.href} href={item.href} onClick={() => setIsMobileMenuOpen(false)} className={`flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium ${pathname === item.href ? 'bg-[#3a0519] text-white' : 'text-gray-500'}`}>
                     {item.icon} {item.name}
                 </Link>
