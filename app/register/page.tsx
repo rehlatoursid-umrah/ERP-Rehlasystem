@@ -29,6 +29,7 @@ export default function RegisterPage() {
   const [result, setResult] = useState<any>(null);
   const [ktpFile, setKtpFile] = useState<File | null>(null);
   const [passportFile, setPassportFile] = useState<File | null>(null);
+  const [showTerms, setShowTerms] = useState(false);
 
   const [form, setForm] = useState({
     fullName: '', nik: '', birthPlace: '', birthDate: '', gender: '',
@@ -549,7 +550,7 @@ export default function RegisterPage() {
                       <input type="checkbox" checked={form.agreedTerms} onChange={e => set('agreedTerms', e.target.checked)} className="hidden" />
                       <div>
                         <p className={`text-sm font-bold ${form.agreedTerms ? 'text-[#3a0519]' : 'text-gray-800'}`}>
-                          Saya telah membaca dan menyetujui <span className="underline text-[#3a0519] font-bold">syarat dan ketentuan</span> yang berlaku untuk perjalanan umrah ini.
+                          Saya telah membaca dan menyetujui <button type="button" onClick={e => { e.preventDefault(); setShowTerms(true) }} className="underline text-[#3a0519] font-bold hover:text-[#5a0826]">syarat dan ketentuan</button> yang berlaku untuk perjalanan umrah ini.
                         </p>
                         <p className="text-xs text-gray-500 mt-1">Saya memahami bahwa semua informasi yang saya berikan adalah benar dan dapat dipertanggungjawabkan.</p>
                       </div>
@@ -585,6 +586,104 @@ export default function RegisterPage() {
           </div>
         </div>
       </div>
+
+      {/* Terms & Conditions Modal */}
+      {showTerms && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4" onClick={() => setShowTerms(false)}>
+          <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-2xl" onClick={e => e.stopPropagation()}>
+            <div className="bg-[#3a0519] p-5 flex justify-between items-center">
+              <h3 className="text-white font-bold text-lg">Syarat & Ketentuan</h3>
+              <button onClick={() => setShowTerms(false)} className="text-white/60 hover:text-white text-xl">✕</button>
+            </div>
+            <div className="p-6 overflow-y-auto max-h-[60vh] text-sm text-gray-700 space-y-5">
+              <h4 className="font-bold text-[#3a0519] text-base">A. PENDAFTARAN</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Calon jamaah wajib mengisi formulir pendaftaran dengan data yang benar, lengkap, dan sesuai identitas resmi (KTP/Paspor). Segala akibat hukum yang timbul dari kesalahan data adalah tanggung jawab pendaftar.</li>
+                <li>Pendaftaran dinyatakan sah dan mengikat setelah calon jamaah membayar Down Payment (DP) minimal sesuai ketentuan paket yang dipilih dan dikonfirmasi secara tertulis oleh Rehlatours Indonesia.</li>
+                <li>Pendaftaran yang dilakukan tanpa DP bersifat tidak mengikat dan tidak menjamin slot keberangkatan.</li>
+                <li>Pelunasan wajib dilakukan paling lambat 45 (empat puluh lima) hari sebelum tanggal keberangkatan.</li>
+                <li>Pendaftaran yang dilakukan kurang dari 45 hari sebelum keberangkatan wajib membayar lunas pada saat pendaftaran.</li>
+                <li>Segala biaya dan risiko yang timbul akibat keterlambatan pembayaran atau pengumpulan dokumen sepenuhnya menjadi tanggung jawab jamaah.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">B. DOKUMEN</h4>
+              <p>Calon jamaah wajib menyerahkan dokumen berikut selambat-lambatnya 60 hari sebelum keberangkatan:</p>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Paspor asli yang masih berlaku minimal 8 (delapan) bulan dari tanggal keberangkatan, dengan nama minimal 2 (dua) suku kata.</li>
+                <li>E-KTP yang masih berlaku.</li>
+                <li>Pas foto terbaru berwarna berlatar belakang putih, ukuran 4×6 dan 3×4 (masing-masing 3 lembar).</li>
+                <li>Sertifikat Vaksinasi Meningitis beserta kartu kuning (International Certificate of Vaccination) yang diterbitkan oleh Kantor Kesehatan Pelabuhan (KKP) yang sah.</li>
+                <li>Buku Nikah (untuk jamaah suami-istri yang berangkat bersama).</li>
+                <li>Dokumen tambahan lainnya sesuai ketentuan Kemenag RI dan pemerintah Arab Saudi yang berlaku.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">C. PEMBATALAN & PENGEMBALIAN DANA (REFUND)</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Pengajuan pengembalian dana (refund) dilakukan maksimal dalam 90 (sembilan puluh) hari kerja sejak pendaftaran calon Jamaah.</li>
+                <li>Refund akan ditransfer ke rekening atas nama jamaah yang bersangkutan.</li>
+                <li>Pembatalan yang disebabkan oleh penolakan visa dari pemerintah Arab Saudi bukan merupakan kesalahan Rehlatours, dan kebijakan refund mengikuti ketentuan penyelenggara visa.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">D. PENGGANTIAN JAMAAH</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Jamaah yang berhalangan berangkat dapat digantikan oleh anggota keluarga atau pihak lain atas persetujuan tertulis dari Rehlatours Indonesia dengan maksimal pengajuan 60 (enam puluh) hari kerja sebelum keberangkatan.</li>
+                <li>Penggantian jamaah dikenakan biaya administrasi dan wajib memenuhi seluruh persyaratan dokumen.</li>
+                <li>Penggantian jamaah akibat meninggal dunia dapat diproses dengan pengembalian dana 100% (maksimal 90 hari kerja) dengan melampirkan Surat Keterangan Kematian resmi dari instansi terkait.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">E. PERUBAHAN JADWAL & FASILITAS</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Harga paket dapat berubah sewaktu-waktu menyesuaikan nilai tukar Rupiah terhadap USD, kebijakan maskapai, kebijakan pemerintah RI dan Arab Saudi, serta kondisi di luar kendali perusahaan.</li>
+                <li>Jadwal keberangkatan dan kepulangan mengacu pada ketentuan maskapai. Perubahan jadwal yang disebabkan oleh maskapai akan diinformasikan secara resmi kepada jamaah.</li>
+                <li>Itinerary, fasilitas, dan jadwal kegiatan dapat berubah sewaktu-waktu sesuai situasi dan kondisi di lapangan tanpa mengurangi kualitas layanan secara signifikan.</li>
+                <li>Penggantian hotel dengan kelas setara atau lebih baik dapat dilakukan tanpa pemberitahuan terlebih dahulu jika diperlukan.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">F. KESEHATAN & KELAIKAN BERANGKAT</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Jamaah wajib dalam kondisi sehat jasmani dan rohani yang layak untuk melakukan perjalanan ibadah.</li>
+                <li>Jamaah dengan kondisi medis khusus (hipertensi, diabetes, jantung, kehamilan, dsb.) wajib menginformasikan kepada Rehlatours sebelum pendaftaran dan melampirkan surat keterangan dokter.</li>
+                <li>Jamaah yang tidak memenuhi syarat kesehatan untuk terbang berdasarkan ketentuan maskapai atau otoritas kesehatan, tidak dapat diizinkan berangkat dan pembatalan mengikuti ketentuan poin C.</li>
+                <li>Rehlatours tidak menanggung biaya pengobatan di luar cakupan asuransi perjalanan yang telah disediakan.</li>
+                <li>Jamaah wajib memiliki vaksin meningitis yang valid sesuai ketentuan pemerintah Arab Saudi.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">G. TANGGUNG JAWAB & BATASAN KEWAJIBAN</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Rehlatours Indonesia tidak bertanggung jawab atas kerugian yang disebabkan oleh:
+                  <ul className="list-disc pl-5 mt-1 space-y-1">
+                    <li>Force majeure (bencana alam, pandemi, perang, kebakaran, dll.)</li>
+                    <li>Perubahan kebijakan pemerintah RI dan/atau Arab Saudi</li>
+                    <li>Pembatalan atau keterlambatan yang disebabkan oleh maskapai</li>
+                    <li>Penolakan visa oleh otoritas Arab Saudi</li>
+                    <li>Kelalaian atau tindakan jamaah sendiri</li>
+                  </ul>
+                </li>
+                <li>Rehlatours bertanggung jawab penuh atas layanan yang tertera dalam paket dan invoice resmi.</li>
+                <li>Setiap kehilangan barang bawaan pribadi selama perjalanan bukan merupakan tanggung jawab Rehlatours.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">H. KEPATUHAN & TATA TERTIB</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Jamaah wajib mematuhi seluruh instruksi dari pembimbing, mutawwif, dan petugas Rehlatours selama perjalanan.</li>
+                <li>Jamaah dilarang membawa barang-barang yang dilarang oleh peraturan penerbangan, kepabeanan Indonesia, maupun Arab Saudi.</li>
+                <li>Jamaah yang melanggar aturan atau mengganggu ketertiban rombongan dapat dikenakan tindakan tegas sesuai kebijakan Rehlatours, termasuk pemulangan lebih awal dengan biaya ditanggung sendiri.</li>
+                <li>Setiap perselisihan yang timbul akan diselesaikan secara musyawarah. Apabila tidak tercapai kesepakatan, akan diselesaikan melalui jalur hukum yang berlaku di Indonesia.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">I. PERLINDUNGAN DATA PRIBADI</h4>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Data pribadi jamaah yang dikumpulkan oleh Rehlatours Indonesia digunakan semata-mata untuk keperluan administrasi perjalanan ibadah.</li>
+                <li>Rehlatours berkomitmen untuk menjaga kerahasiaan data jamaah sesuai dengan ketentuan perlindungan data pribadi yang berlaku di Indonesia (UU No. 27 Tahun 2022 tentang PDP).</li>
+                <li>Data jamaah tidak akan disebarluaskan kepada pihak ketiga tanpa izin, kecuali yang diperlukan untuk pemrosesan visa, hotel, dan maskapai.</li>
+              </ol>
+              <h4 className="font-bold text-[#3a0519] text-base">J. PERSETUJUAN</h4>
+              <p>Dengan menekan tombol &ldquo;Saya Setuju&rdquo; atau menyelesaikan proses pembayaran DP, jamaah dinyatakan telah:</p>
+              <ol className="list-decimal pl-5 space-y-2">
+                <li>Membaca dan memahami seluruh Syarat & Ketentuan ini</li>
+                <li>Menyetujui semua ketentuan yang berlaku</li>
+                <li>Memberikan kuasa kepada Rehlatours Indonesia untuk memproses seluruh dokumen perjalanan ibadah</li>
+              </ol>
+            </div>
+            <div className="p-5 border-t bg-gray-50 flex gap-3 justify-end">
+              <button onClick={() => setShowTerms(false)} className="px-5 py-2.5 text-sm font-bold text-gray-500 border border-gray-300 rounded-xl hover:bg-gray-100">Tutup</button>
+              <button onClick={() => { set('agreedTerms', true); setShowTerms(false) }} className="px-5 py-2.5 text-sm font-bold text-white bg-[#3a0519] rounded-xl hover:bg-[#5a0826]">Saya Setuju</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <style jsx global>{`
         @keyframes fadeInUp {
