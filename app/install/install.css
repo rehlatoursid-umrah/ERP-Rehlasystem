@@ -1,0 +1,515 @@
+/* ============================================
+   INSTALL PAGE - Rehla ERP PWA Guide
+   ============================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=Cormorant+Garamond:wght@400;500;600;700&display=swap');
+
+.install-root {
+  min-height: 100vh;
+  background: #faf8f9;
+  font-family: 'DM Sans', sans-serif;
+  color: #1a1a1a;
+  overflow-x: hidden;
+}
+
+/* ── Hero Section ── */
+.install-hero {
+  position: relative;
+  background: linear-gradient(145deg, #3a0519 0%, #1a020c 60%, #0d0106 100%);
+  padding: 80px 24px 100px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.install-hero::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -20%;
+  width: 140%;
+  height: 200%;
+  background: radial-gradient(ellipse at 30% 50%, rgba(201,168,76,0.08) 0%, transparent 60%),
+              radial-gradient(ellipse at 70% 30%, rgba(201,168,76,0.05) 0%, transparent 50%);
+  pointer-events: none;
+}
+
+.install-hero-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.04;
+  background-image: 
+    linear-gradient(rgba(201,168,76,0.5) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(201,168,76,0.5) 1px, transparent 1px);
+  background-size: 60px 60px;
+}
+
+.install-hero-content {
+  position: relative;
+  z-index: 2;
+  max-width: 700px;
+  margin: 0 auto;
+}
+
+.install-hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(201,168,76,0.12);
+  border: 1px solid rgba(201,168,76,0.25);
+  padding: 8px 20px;
+  border-radius: 100px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #C9A84C;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  margin-bottom: 28px;
+  backdrop-filter: blur(10px);
+}
+
+.install-hero-badge .dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #C9A84C;
+  animation: pulse-dot 2s infinite;
+}
+
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.7); }
+}
+
+.install-hero h1 {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(36px, 6vw, 56px);
+  font-weight: 600;
+  color: #fff;
+  line-height: 1.15;
+  margin-bottom: 20px;
+}
+
+.install-hero h1 em {
+  font-style: italic;
+  color: #C9A84C;
+}
+
+.install-hero-desc {
+  font-size: 16px;
+  color: rgba(255,255,255,0.55);
+  line-height: 1.7;
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+/* ── Floating Device Icons ── */
+.install-hero-devices {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 40px;
+}
+
+.install-device-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.1);
+  padding: 10px 20px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s;
+}
+
+.install-device-chip:hover {
+  background: rgba(201,168,76,0.1);
+  border-color: rgba(201,168,76,0.3);
+  color: #C9A84C;
+  transform: translateY(-2px);
+}
+
+.install-device-chip svg {
+  width: 18px;
+  height: 18px;
+  opacity: 0.8;
+}
+
+/* ── Main Content ── */
+.install-main {
+  max-width: 900px;
+  margin: -50px auto 0;
+  padding: 0 20px 80px;
+  position: relative;
+  z-index: 5;
+}
+
+/* ── Device Tabs ── */
+.install-tabs {
+  display: flex;
+  gap: 8px;
+  background: #fff;
+  padding: 8px;
+  border-radius: 20px;
+  box-shadow: 0 8px 40px rgba(58,5,25,0.08), 0 1px 3px rgba(0,0,0,0.04);
+  border: 1px solid rgba(0,0,0,0.04);
+  margin-bottom: 32px;
+  flex-wrap: wrap;
+}
+
+.install-tab {
+  flex: 1;
+  min-width: 120px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #888;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16,1,0.3,1);
+}
+
+.install-tab:hover {
+  color: #3a0519;
+  background: #faf8f9;
+}
+
+.install-tab.active {
+  color: #fff;
+  background: #3a0519;
+  box-shadow: 0 4px 16px rgba(58,5,25,0.25);
+}
+
+.install-tab svg {
+  width: 18px;
+  height: 18px;
+}
+
+/* ── Guide Card ── */
+.install-card {
+  background: #fff;
+  border-radius: 24px;
+  box-shadow: 0 8px 40px rgba(58,5,25,0.06), 0 1px 3px rgba(0,0,0,0.03);
+  border: 1px solid rgba(0,0,0,0.04);
+  overflow: hidden;
+  animation: cardIn 0.5s cubic-bezier(0.16,1,0.3,1);
+}
+
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.install-card-header {
+  padding: 32px 32px 24px;
+  border-bottom: 1px solid #f0eeef;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.install-card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3a0519, #5a0826);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.install-card-icon svg {
+  width: 24px;
+  height: 24px;
+  color: #fff;
+}
+
+.install-card-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  color: #3a0519;
+  margin: 0;
+}
+
+.install-card-header p {
+  font-size: 13px;
+  color: #999;
+  margin: 4px 0 0;
+}
+
+.install-card-body {
+  padding: 32px;
+}
+
+/* ── Steps ── */
+.install-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.install-step {
+  display: flex;
+  gap: 20px;
+  position: relative;
+}
+
+.install-step-line {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex-shrink: 0;
+  width: 44px;
+}
+
+.install-step-num {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: #faf8f9;
+  border: 2px solid #e8e4e6;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #3a0519;
+  flex-shrink: 0;
+  transition: all 0.3s;
+  z-index: 2;
+}
+
+.install-step:hover .install-step-num {
+  background: #3a0519;
+  border-color: #3a0519;
+  color: #fff;
+  transform: scale(1.08);
+  box-shadow: 0 4px 16px rgba(58,5,25,0.2);
+}
+
+.install-step-connector {
+  width: 2px;
+  flex: 1;
+  background: linear-gradient(180deg, #e8e4e6, #f0eeef);
+  min-height: 20px;
+}
+
+.install-step:last-child .install-step-connector {
+  display: none;
+}
+
+.install-step-content {
+  flex: 1;
+  padding-bottom: 32px;
+}
+
+.install-step:last-child .install-step-content {
+  padding-bottom: 0;
+}
+
+.install-step-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #1a1a1a;
+  margin: 0 0 8px;
+  line-height: 44px;
+}
+
+.install-step-desc {
+  font-size: 14px;
+  color: #666;
+  line-height: 1.7;
+  margin: 0;
+}
+
+.install-step-desc strong {
+  color: #3a0519;
+  font-weight: 600;
+}
+
+/* Highlighted box inside step */
+.install-highlight {
+  margin-top: 12px;
+  padding: 14px 18px;
+  background: linear-gradient(135deg, #faf8f9, #f5f0f2);
+  border: 1px solid #e8e4e6;
+  border-left: 3px solid #3a0519;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #555;
+  line-height: 1.6;
+}
+
+.install-highlight code {
+  background: #3a0519;
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* ── Tips Section ── */
+.install-tips {
+  margin-top: 32px;
+  padding: 24px;
+  background: linear-gradient(135deg, rgba(201,168,76,0.05), rgba(201,168,76,0.02));
+  border: 1px solid rgba(201,168,76,0.15);
+  border-radius: 16px;
+}
+
+.install-tips-title {
+  font-size: 12px;
+  font-weight: 800;
+  color: #C9A84C;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin: 0 0 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.install-tips ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.install-tips li {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.6;
+  padding-left: 24px;
+  position: relative;
+}
+
+.install-tips li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #C9A84C;
+  font-weight: 700;
+}
+
+/* ── FAQ Section ── */
+.install-faq {
+  margin-top: 40px;
+}
+
+.install-faq-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 28px;
+  font-weight: 600;
+  color: #3a0519;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.install-faq-item {
+  background: #fff;
+  border: 1px solid rgba(0,0,0,0.05);
+  border-radius: 16px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  transition: all 0.3s;
+}
+
+.install-faq-item:hover {
+  box-shadow: 0 4px 20px rgba(58,5,25,0.06);
+}
+
+.install-faq-q {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  text-align: left;
+  font-family: 'DM Sans', sans-serif;
+  transition: color 0.2s;
+}
+
+.install-faq-q:hover { color: #3a0519; }
+
+.install-faq-q svg {
+  width: 20px;
+  height: 20px;
+  color: #999;
+  transition: transform 0.3s;
+  flex-shrink: 0;
+}
+
+.install-faq-item.open .install-faq-q svg {
+  transform: rotate(180deg);
+  color: #3a0519;
+}
+
+.install-faq-a {
+  max-height: 0;
+  overflow: hidden;
+  transition: max-height 0.4s cubic-bezier(0.16,1,0.3,1);
+}
+
+.install-faq-item.open .install-faq-a {
+  max-height: 300px;
+}
+
+.install-faq-a-inner {
+  padding: 0 24px 20px;
+  font-size: 14px;
+  color: #666;
+  line-height: 1.7;
+}
+
+/* ── Footer ── */
+.install-footer {
+  text-align: center;
+  padding: 40px 20px;
+  border-top: 1px solid #eee;
+  margin-top: 60px;
+}
+
+.install-footer p {
+  font-size: 11px;
+  color: #aaa;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.install-footer a {
+  color: #3a0519;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+/* ── Responsive ── */
+@media (max-width: 640px) {
+  .install-hero { padding: 60px 20px 80px; }
+  .install-hero-devices { flex-wrap: wrap; }
+  .install-tabs { flex-direction: column; }
+  .install-tab { min-width: 0; }
+  .install-card-header { padding: 24px; flex-direction: column; text-align: center; }
+  .install-card-body { padding: 24px; }
+  .install-step-title { line-height: 1.4; padding-top: 10px; }
+}

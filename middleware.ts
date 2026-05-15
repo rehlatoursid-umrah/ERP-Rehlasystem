@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   // Public routes - no auth required
-  const publicRoutes = ['/register', '/payment', '/api/public'];
+  const publicRoutes = ['/register', '/payment', '/install', '/api/public'];
   if (publicRoutes.some(route => pathname.startsWith(route))) {
     return NextResponse.next();
   }
@@ -48,6 +48,7 @@ export const config = {
     '/login',
     '/register',
     '/payment',
+    '/install',
     '/api/public/:path*',
   ],
 };
