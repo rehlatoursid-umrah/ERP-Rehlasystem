@@ -220,9 +220,8 @@ export async function POST(request: Request) {
       };
 
       console.log('[PDF] Starting PDF generation for:', customer.fullName);
-      const pdfBuffer = await renderToBuffer(
-        React.createElement(RegistrationConfirmationPdf, { data: pdfData })
-      );
+      const pdfElement = React.createElement(RegistrationConfirmationPdf, { data: pdfData as any });
+      const pdfBuffer = await renderToBuffer(pdfElement as any);
       console.log('[PDF] PDF buffer generated, size:', pdfBuffer.length);
 
       // Upload PDF to R2
