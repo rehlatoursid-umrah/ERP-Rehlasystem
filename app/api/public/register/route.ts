@@ -18,15 +18,17 @@ export async function POST(request: Request) {
     const ktpFile = formData.get('ktpFile') as Blob | null;
     const passportFile = formData.get('passportFile') as Blob | null;
 
-    let ktpUrl: string | null = null;
-    let passportUrl: string | null = null;
+    // Check for pre-uploaded URLs (from immediate upload flow)
+    let ktpUrl: string | null = (formData.get('ktpUrl') as string) || null;
+    let passportUrl: string | null = (formData.get('passportUrl') as string) || null;
 
+    // Fall back to uploading files if no pre-uploaded URLs
     try {
       const { uploadFileToR2 } = await import('@/app/lib/s3');
-      if (ktpFile) {
+      if (!ktpUrl && ktpFile) {
         ktpUrl = await uploadFileToR2(Buffer.from(await ktpFile.arrayBuffer()), (ktpFile as File).name || 'ktp.jpg', ktpFile.type || 'image/jpeg', 'documents');
       }
-      if (passportFile) {
+      if (!passportUrl && passportFile) {
         passportUrl = await uploadFileToR2(Buffer.from(await passportFile.arrayBuffer()), (passportFile as File).name || 'passport.jpg', passportFile.type || 'image/jpeg', 'documents');
       }
     } catch (err) {
@@ -43,16 +45,28 @@ export async function POST(request: Request) {
         birthDate: body.birthDate ? new Date(body.birthDate) : null,
         birthPlace: body.birthPlace?.trim() || null,
         nik: body.nik?.trim() || null,
+        fatherName: body.fatherName?.trim() || null,
+        motherName: body.motherName?.trim() || null,
+        maritalStatus: body.maritalStatus || null,
+        occupation: body.occupation?.trim() || null,
         phone: body.phone.trim(),
         whatsapp: body.whatsapp?.trim() || null,
         email: body.email?.trim() || null,
         address: body.address?.trim() || null,
         city: body.city?.trim() || null,
         province: body.province?.trim() || null,
+        postalCode: body.postalCode?.trim() || null,
         passportNumber: body.passportNumber?.trim() || null,
         passportExpiry: body.passportExpiry ? new Date(body.passportExpiry) : null,
         passportIssued: body.passportIssued ? new Date(body.passportIssued) : null,
+        passportPlace: body.passportPlace?.trim() || null,
         passportPhoto: passportUrl,
+        hasDiseases: body.hasDiseases === 'true',
+        diseaseNotes: body.diseaseNotes?.trim() || null,
+        specialNeeds: body.specialNeeds === 'true',
+        wheelchair: body.wheelchair === 'true',
+        previousUmrah: body.previousUmrah === 'true',
+        previousHajj: body.previousHajj === 'true',
         bloodType: body.bloodType || null,
         healthNotes: body.healthNotes?.trim() || null,
         vaccineMeningitis: body.vaccineMeningitis === 'true',
@@ -60,6 +74,7 @@ export async function POST(request: Request) {
         emergencyName: body.emergencyName?.trim() || null,
         emergencyPhone: body.emergencyPhone?.trim() || null,
         emergencyRelation: body.emergencyRelation?.trim() || null,
+        agreedTerms: body.agreedTerms === 'true',
         notes: body.notes?.trim() || null,
       },
     });

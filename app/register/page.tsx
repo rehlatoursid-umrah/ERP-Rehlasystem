@@ -13,12 +13,12 @@ type Package = {
 };
 
 const STEPS = [
-  { id: 'Data Diri', icon: User, desc: 'Identitas Pribadi' },
-  { id: 'Kontak', icon: Phone, desc: 'Informasi Komunikasi' },
+  { id: 'Data Diri', icon: User, desc: 'Informasi Pribadi' },
+  { id: 'Kontak', icon: Phone, desc: 'Informasi Kontak' },
   { id: 'Dokumen', icon: FileText, desc: 'KTP & Paspor' },
-  { id: 'Kesehatan', icon: Heart, desc: 'Kondisi Fisik' },
+  { id: 'Kesehatan', icon: Heart, desc: 'Kesehatan & Ibadah' },
   { id: 'Paket', icon: Star, desc: 'Layanan Umrah' },
-  { id: 'Review', icon: CheckCircle2, desc: 'Konfirmasi Data' }
+  { id: 'Review', icon: CheckCircle2, desc: 'Syarat & Ketentuan' }
 ];
 
 export default function RegisterPage() {
@@ -31,13 +31,19 @@ export default function RegisterPage() {
   const [passportFile, setPassportFile] = useState<File | null>(null);
 
   const [form, setForm] = useState({
-    fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '',
-    nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '',
-    passportNumber: '', passportExpiry: '', passportIssued: '',
-    bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '',
-    emergencyName: '', emergencyPhone: '', emergencyRelation: '',
-    notes: '', packageId: '', roomType: 'QUAD', bookingNotes: '',
+    fullName: '', nik: '', birthPlace: '', birthDate: '', gender: '',
+    fatherName: '', motherName: '', maritalStatus: '', occupation: '',
+    phone: '', email: '', address: '', city: '', province: '', postalCode: '',
+    whatsapp: '', emergencyName: '', emergencyRelation: '', emergencyPhone: '',
+    passportNumber: '', passportIssued: '', passportExpiry: '', passportPlace: '',
+    hasDiseases: false, diseaseNotes: '', specialNeeds: false, wheelchair: false,
+    previousUmrah: false, previousHajj: false,
+    packageId: '', roomType: 'QUAD', bookingNotes: '',
+    agreedTerms: false,
   });
+  const [ktpUploadedUrl, setKtpUploadedUrl] = useState<string | null>(null);
+  const [passportUploadedUrl, setPassportUploadedUrl] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
 
   useEffect(() => {
     fetch('/api/public/packages').then(r => r.json()).then(d => {
@@ -63,14 +69,19 @@ export default function RegisterPage() {
   };
 
   const handleSubmit = async () => {
+    if (!form.agreedTerms) { alert('Anda harus menyetujui syarat dan ketentuan'); return; }
     setLoading(true);
     try {
       const formData = new FormData();
       Object.entries(form).forEach(([k, v]) => {
         if (v !== '' && v !== null && v !== undefined) formData.append(k, String(v));
       });
-      if (ktpFile) formData.append('ktpFile', ktpFile);
-      if (passportFile) formData.append('passportFile', passportFile);
+      // Pass pre-uploaded URLs instead of files
+      if (ktpUploadedUrl) formData.append('ktpUrl', ktpUploadedUrl);
+      if (passportUploadedUrl) formData.append('passportUrl', passportUploadedUrl);
+      // Also send files as fallback if not pre-uploaded
+      if (ktpFile && !ktpUploadedUrl) formData.append('ktpFile', ktpFile);
+      if (passportFile && !passportUploadedUrl) formData.append('passportFile', passportFile);
 
       const res = await fetch('/api/public/register', {
         method: 'POST',
@@ -212,31 +223,47 @@ export default function RegisterPage() {
                 {/* Step 0: Data Diri */}
                 {step === 0 && (
                   <div className="space-y-6">
-                    <Field label="Nama Lengkap *" value={form.fullName} onChange={v => set('fullName', v)} placeholder="Sesuai paspor atau KTP" icon={User} />
-                    <Field label="Nama Panggilan" value={form.nickname} onChange={v => set('nickname', v)} placeholder="Nama panggilan sehari-hari" />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <SelectField label="Jenis Kelamin" value={form.gender} onChange={v => set('gender', v)} options={[{v:'',l:'Pilih Jenis Kelamin'},{v:'MALE',l:'Laki-laki'},{v:'FEMALE',l:'Perempuan'}]} />
-                      <Field label="Tempat Lahir" value={form.birthPlace} onChange={v => set('birthPlace', v)} placeholder="Kota kelahiran" />
+                      <Field label="Nama Lengkap *" value={form.fullName} onChange={v => set('fullName', v)} placeholder="Contoh: Ahmad Sulaiman" icon={User} />
+                      <Field label="NIK (Nomor Induk Kependudukan) *" value={form.nik} onChange={v => set('nik', v)} placeholder="16 digit NIK" />
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <Field label="Tanggal Lahir" type="date" value={form.birthDate} onChange={v => set('birthDate', v)} />
-                      <Field label="NIK KTP *" value={form.nik} onChange={v => set('nik', v)} placeholder="16 digit NIK" />
+                      <Field label="Tempat Lahir *" value={form.birthPlace} onChange={v => set('birthPlace', v)} placeholder="Contoh: Jakarta" />
+                      <Field label="Tanggal Lahir *" type="date" value={form.birthDate} onChange={v => set('birthDate', v)} />
                     </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <Field label="Nama Ayah *" value={form.fatherName} onChange={v => set('fatherName', v)} placeholder="Masukkan nama ayah" />
+                      <Field label="Nama Ibu *" value={form.motherName} onChange={v => set('motherName', v)} placeholder="Masukkan nama ibu" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <SelectField label="Jenis Kelamin *" value={form.gender} onChange={v => set('gender', v)} options={[{v:'',l:'Pilih jenis kelamin'},{v:'MALE',l:'Laki-laki'},{v:'FEMALE',l:'Perempuan'}]} />
+                      <SelectField label="Status Pernikahan *" value={form.maritalStatus} onChange={v => set('maritalStatus', v)} options={[{v:'',l:'Pilih status pernikahan'},{v:'SINGLE',l:'Belum Menikah'},{v:'MARRIED',l:'Menikah'},{v:'DIVORCED',l:'Cerai'},{v:'WIDOWED',l:'Janda/Duda'}]} />
+                    </div>
+                    <Field label="Pekerjaan *" value={form.occupation} onChange={v => set('occupation', v)} placeholder="Contoh: Pegawai Swasta" />
                   </div>
                 )}
 
-                {/* Step 1: Kontak */}
                 {step === 1 && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <Field label="Nomor Handphone *" value={form.phone} onChange={v => set('phone', v)} placeholder="081234567890" icon={Phone} />
-                      <Field label="WhatsApp" value={form.whatsapp} onChange={v => set('whatsapp', v)} placeholder="081234567890" icon={Phone} />
+                      <Field label="Nomor Telepon *" value={form.phone} onChange={v => set('phone', v)} placeholder="Contoh: 08123456789" icon={Phone} />
+                      <Field label="Email *" type="email" value={form.email} onChange={v => set('email', v)} placeholder="contoh@email.com" />
                     </div>
-                    <Field label="Email" type="email" value={form.email} onChange={v => set('email', v)} placeholder="email@domain.com" />
-                    <Field label="Alamat Tempat Tinggal" value={form.address} onChange={v => set('address', v)} textarea placeholder="Nama jalan, RT/RW, kelurahan..." />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                      <Field label="Kota / Kabupaten" value={form.city} onChange={v => set('city', v)} placeholder="Contoh: Jakarta Selatan" />
-                      <Field label="Provinsi" value={form.province} onChange={v => set('province', v)} placeholder="Contoh: DKI Jakarta" />
+                      <Field label="Alamat Lengkap *" value={form.address} onChange={v => set('address', v)} textarea placeholder="Alamat lengkap dengan RT/RW, Kelurahan, Kecamatan" />
+                      <Field label="Kota *" value={form.city} onChange={v => set('city', v)} placeholder="Masukkan kota" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <Field label="Provinsi *" value={form.province} onChange={v => set('province', v)} placeholder="Masukkan provinsi" />
+                      <Field label="Kode Pos *" value={form.postalCode} onChange={v => set('postalCode', v)} placeholder="Masukkan kode pos" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <Field label="Nomor WhatsApp *" value={form.whatsapp} onChange={v => set('whatsapp', v)} placeholder="Masukkan nomor WhatsApp" icon={Phone} />
+                      <Field label="Kontak Darurat *" value={form.emergencyName} onChange={v => set('emergencyName', v)} placeholder="Nama kontak darurat" />
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                      <SelectField label="Hubungan *" value={form.emergencyRelation} onChange={v => set('emergencyRelation', v)} options={[{v:'',l:'Pilih hubungan'},{v:'SPOUSE',l:'Suami/Istri'},{v:'PARENT',l:'Orang Tua'},{v:'CHILD',l:'Anak'},{v:'SIBLING',l:'Saudara'},{v:'OTHER',l:'Lainnya'}]} />
+                      <Field label="Nomor Telepon Kontak Darurat *" value={form.emergencyPhone} onChange={v => set('emergencyPhone', v)} placeholder="Masukkan nomor telepon kontak darurat" />
                     </div>
                   </div>
                 )}
@@ -251,39 +278,63 @@ export default function RegisterPage() {
                       <div className="space-y-2">
                         <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">Foto KTP Asli *</label>
                         <div className="relative group">
-                          <input type="file" accept="image/*" onChange={e => setKtpFile(e.target.files?.[0] || null)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                          <div className={`w-full p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-colors ${ktpFile ? 'border-[#3a0519] bg-[#3a0519]/5' : 'border-gray-300 bg-gray-50 group-hover:border-[#3a0519]/50 group-hover:bg-[#faf8f9]'}`}>
-                            <ImageIcon size={32} className={`mb-3 ${ktpFile ? 'text-[#3a0519]' : 'text-gray-400'}`} />
-                            <p className={`text-sm font-semibold mb-1 ${ktpFile ? 'text-[#3a0519]' : 'text-gray-700'}`}>{ktpFile ? ktpFile.name : 'Klik atau seret file KTP ke sini'}</p>
-                            <p className="text-xs text-gray-500">Format JPG/PNG maksimal 5MB</p>
+                          <input type="file" accept="image/*" onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            setKtpFile(file);
+                            setUploading(true);
+                            try {
+                              const fd = new FormData(); fd.append('file', file); fd.append('folder', 'documents'); fd.append('category', 'KTP');
+                              const res = await fetch('/api/public/upload', { method: 'POST', body: fd });
+                              const data = await res.json();
+                              if (data.url) setKtpUploadedUrl(data.url);
+                            } catch {} finally { setUploading(false); }
+                          }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                          <div className={`w-full p-6 border-2 border-dashed rounded-xl flex flex-col items-center justify-center transition-colors ${ktpFile || ktpUploadedUrl ? 'border-[#3a0519] bg-[#3a0519]/5' : 'border-gray-300 bg-gray-50 group-hover:border-[#3a0519]/50 group-hover:bg-[#faf8f9]'}`}>
+                            {ktpUploadedUrl ? (
+                              <><img src={ktpUploadedUrl} alt="KTP" className="w-full max-w-xs rounded-lg mb-2 border" /><p className="text-sm font-semibold text-[#3a0519]">✓ KTP berhasil diunggah</p></>
+                            ) : (
+                              <><ImageIcon size={32} className={`mb-3 ${ktpFile ? 'text-[#3a0519]' : 'text-gray-400'}`} /><p className={`text-sm font-semibold mb-1 ${ktpFile ? 'text-[#3a0519]' : 'text-gray-700'}`}>{uploading ? 'Mengunggah...' : ktpFile ? ktpFile.name : 'Klik atau seret file KTP ke sini'}</p><p className="text-xs text-gray-500">Format JPG/PNG maksimal 5MB</p></>
+                            )}
                           </div>
                         </div>
                       </div>
                     </div>
 
                     <div className="bg-white border-2 border-gray-100 rounded-2xl p-6 hover:border-[#3a0519]/20 transition-colors">
-                      <div className="flex justify-between items-center mb-6">
-                        <h4 className="text-sm font-bold text-[#3a0519] flex items-center gap-2">
-                          <Shield size={18} /> Data Paspor (Opsional)
-                        </h4>
-                        <span className="text-[10px] bg-gray-100 text-gray-500 px-2 py-1 rounded font-bold uppercase">Bisa Disusulkan</span>
-                      </div>
-                      
+                      <h4 className="text-sm font-bold text-[#3a0519] mb-6 flex items-center gap-2">
+                        <Shield size={18} /> Informasi Paspor
+                      </h4>
                       <div className="space-y-6">
-                        <Field label="Nomor Paspor" value={form.passportNumber} onChange={v => set('passportNumber', v)} placeholder="Contoh: A 1234567" />
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          <Field label="Tanggal Terbit" type="date" value={form.passportIssued} onChange={v => set('passportIssued', v)} />
-                          <Field label="Berlaku Sampai" type="date" value={form.passportExpiry} onChange={v => set('passportExpiry', v)} />
+                          <Field label="Nomor Paspor *" value={form.passportNumber} onChange={v => set('passportNumber', v)} placeholder="Contoh: A1234567" />
+                          <Field label="Tanggal Penerbitan *" type="date" value={form.passportIssued} onChange={v => set('passportIssued', v)} />
+                        </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <Field label="Tanggal Kadaluarsa *" type="date" value={form.passportExpiry} onChange={v => set('passportExpiry', v)} />
+                          <Field label="Tempat Penerbitan *" value={form.passportPlace} onChange={v => set('passportPlace', v)} placeholder="Contoh: Jakarta" />
                         </div>
                         <div className="space-y-2 pt-2">
                           <label className="block text-xs font-bold text-gray-500 uppercase tracking-widest">Foto Halaman Paspor</label>
                           <div className="relative group">
-                            <input type="file" accept="image/*" onChange={e => setPassportFile(e.target.files?.[0] || null)} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                            <div className={`w-full p-4 border-2 border-dashed rounded-xl flex items-center justify-center gap-4 transition-colors ${passportFile ? 'border-[#3a0519] bg-[#3a0519]/5' : 'border-gray-300 bg-gray-50 group-hover:border-[#3a0519]/50'}`}>
-                              <ImageIcon size={24} className={`${passportFile ? 'text-[#3a0519]' : 'text-gray-400'}`} />
-                              <div className="text-left">
-                                <p className={`text-sm font-semibold ${passportFile ? 'text-[#3a0519]' : 'text-gray-700'}`}>{passportFile ? passportFile.name : 'Pilih file foto paspor'}</p>
-                              </div>
+                            <input type="file" accept="image/*" onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+                              setPassportFile(file);
+                              setUploading(true);
+                              try {
+                                const fd = new FormData(); fd.append('file', file); fd.append('folder', 'documents'); fd.append('category', 'PASSPORT');
+                                const res = await fetch('/api/public/upload', { method: 'POST', body: fd });
+                                const data = await res.json();
+                                if (data.url) setPassportUploadedUrl(data.url);
+                              } catch {} finally { setUploading(false); }
+                            }} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
+                            <div className={`w-full p-4 border-2 border-dashed rounded-xl flex items-center justify-center gap-4 transition-colors ${passportFile || passportUploadedUrl ? 'border-[#3a0519] bg-[#3a0519]/5' : 'border-gray-300 bg-gray-50 group-hover:border-[#3a0519]/50'}`}>
+                              {passportUploadedUrl ? (
+                                <><img src={passportUploadedUrl} alt="Paspor" className="w-full max-w-xs rounded-lg border" /><p className="text-sm font-semibold text-[#3a0519]">✓ Paspor berhasil diunggah</p></>
+                              ) : (
+                                <><ImageIcon size={24} className={`${passportFile ? 'text-[#3a0519]' : 'text-gray-400'}`} /><p className={`text-sm font-semibold ${passportFile ? 'text-[#3a0519]' : 'text-gray-700'}`}>{uploading ? 'Mengunggah...' : passportFile ? passportFile.name : 'Pilih file foto paspor'}</p></>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -292,37 +343,59 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {/* Step 3: Kesehatan */}
+                {/* Step 3: Kesehatan & Ibadah */}
                 {step === 3 && (
                   <div className="space-y-10">
                     <div className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                        <SelectField label="Golongan Darah" value={form.bloodType} onChange={v => set('bloodType', v)} options={[{v:'',l:'Pilih...'},{v:'A',l:'A'},{v:'B',l:'B'},{v:'AB',l:'AB'},{v:'O',l:'O'}]} />
-                        <Field label="Tanggal Vaksin Meningitis" type="date" value={form.vaccineDate} onChange={v => set('vaccineDate', v)} />
-                      </div>
-                      
                       <label className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
-                        <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.vaccineMeningitis ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
-                          {form.vaccineMeningitis && <Check size={14} className="text-white" strokeWidth={3} />}
+                        <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.hasDiseases ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                          {form.hasDiseases && <Check size={14} className="text-white" strokeWidth={3} />}
                         </div>
-                        <input type="checkbox" checked={form.vaccineMeningitis} onChange={e => set('vaccineMeningitis', e.target.checked)} className="hidden" />
-                        <div>
-                          <p className={`text-sm font-bold ${form.vaccineMeningitis ? 'text-[#3a0519]' : 'text-gray-800'}`}>Saya sudah divaksin Meningitis</p>
-                          <p className="text-xs text-gray-500 mt-0.5">Wajib bagi jamaah umrah</p>
-                        </div>
+                        <input type="checkbox" checked={form.hasDiseases} onChange={e => set('hasDiseases', e.target.checked)} className="hidden" />
+                        <p className={`text-sm font-bold ${form.hasDiseases ? 'text-[#3a0519]' : 'text-gray-800'}`}>Apakah Anda memiliki penyakit tertentu?</p>
                       </label>
-                      
-                      <Field label="Riwayat & Catatan Medis Khusus" value={form.healthNotes} onChange={v => set('healthNotes', v)} textarea placeholder="Contoh: Alergi obat, diabetes, riwayat jantung, butuh kursi roda, dll." />
+
+                      {form.hasDiseases && (
+                        <Field label="Jenis Penyakit *" value={form.diseaseNotes} onChange={v => set('diseaseNotes', v)} textarea placeholder="Sebutkan jenis penyakit yang Anda miliki" />
+                      )}
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
+                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.specialNeeds ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                            {form.specialNeeds && <Check size={14} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <input type="checkbox" checked={form.specialNeeds} onChange={e => set('specialNeeds', e.target.checked)} className="hidden" />
+                          <p className={`text-sm font-bold ${form.specialNeeds ? 'text-[#3a0519]' : 'text-gray-800'}`}>Kebutuhan Khusus</p>
+                        </label>
+                        <label className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
+                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.wheelchair ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                            {form.wheelchair && <Check size={14} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <input type="checkbox" checked={form.wheelchair} onChange={e => set('wheelchair', e.target.checked)} className="hidden" />
+                          <p className={`text-sm font-bold ${form.wheelchair ? 'text-[#3a0519]' : 'text-gray-800'}`}>Kursi Roda</p>
+                        </label>
+                      </div>
                     </div>
 
                     <div className="pt-8 border-t border-gray-100">
                       <h4 className="text-sm font-bold text-[#3a0519] mb-6 flex items-center gap-2">
-                        <Phone size={18} /> Kontak Darurat Keluarga
+                        <MapPin size={18} /> Pengalaman Ibadah
                       </h4>
-                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                        <Field label="Nama Keluarga" value={form.emergencyName} onChange={v => set('emergencyName', v)} placeholder="Contoh: Siti Aminah" />
-                        <Field label="Nomor HP" value={form.emergencyPhone} onChange={v => set('emergencyPhone', v)} placeholder="08..." />
-                        <Field label="Hubungan" value={form.emergencyRelation} onChange={v => set('emergencyRelation', v)} placeholder="Istri / Suami / Anak" />
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <label className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
+                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.previousUmrah ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                            {form.previousUmrah && <Check size={14} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <input type="checkbox" checked={form.previousUmrah} onChange={e => set('previousUmrah', e.target.checked)} className="hidden" />
+                          <p className={`text-sm font-bold ${form.previousUmrah ? 'text-[#3a0519]' : 'text-gray-800'}`}>Pernah melaksanakan Umrah sebelumnya</p>
+                        </label>
+                        <label className="flex items-center gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
+                          <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${form.previousHajj ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                            {form.previousHajj && <Check size={14} className="text-white" strokeWidth={3} />}
+                          </div>
+                          <input type="checkbox" checked={form.previousHajj} onChange={e => set('previousHajj', e.target.checked)} className="hidden" />
+                          <p className={`text-sm font-bold ${form.previousHajj ? 'text-[#3a0519]' : 'text-gray-800'}`}>Pernah melaksanakan Haji</p>
+                        </label>
                       </div>
                     </div>
                   </div>
@@ -412,7 +485,7 @@ export default function RegisterPage() {
                   </div>
                 )}
 
-                {/* Step 5: Konfirmasi */}
+                {/* Step 5: Syarat & Ketentuan */}
                 {step === 5 && (
                   <div className="space-y-8">
                     <div className="bg-[#faf8f9] rounded-2xl p-6 text-center border border-[#3a0519]/10">
@@ -422,16 +495,14 @@ export default function RegisterPage() {
                     </div>
 
                     <div className="space-y-6">
-                      <SummaryBlock title="Data Diri Pribadi" icon={User} items={[['Nama Lengkap',form.fullName],['Gender',form.gender==='MALE'?'Laki-laki':form.gender==='FEMALE'?'Perempuan':'-'],['TTL',`${form.birthPlace||'-'}, ${form.birthDate||'-'}`],['NIK',form.nik||'-']]} />
-                      <SummaryBlock title="Kontak & Alamat" icon={Phone} items={[['No. HP',form.phone],['WhatsApp',form.whatsapp||'-'],['Email',form.email||'-'],['Alamat',`${form.address||'-'} - ${form.city||'-'} - ${form.province||'-'}`]]} />
+                      <SummaryBlock title="Data Diri Pribadi" icon={User} items={[['Nama Lengkap',form.fullName],['NIK',form.nik||'-'],['TTL',`${form.birthPlace||'-'}, ${form.birthDate||'-'}`],['Nama Ayah',form.fatherName||'-'],['Nama Ibu',form.motherName||'-'],['Jenis Kelamin',form.gender==='MALE'?'Laki-laki':form.gender==='FEMALE'?'Perempuan':'-'],['Status',form.maritalStatus||'-'],['Pekerjaan',form.occupation||'-']]} />
+                      <SummaryBlock title="Kontak & Alamat" icon={Phone} items={[['No. Telepon',form.phone],['WhatsApp',form.whatsapp||'-'],['Email',form.email||'-'],['Alamat',`${form.address||'-'}, ${form.city||'-'}, ${form.province||'-'} ${form.postalCode||''}`],['Kontak Darurat',`${form.emergencyName||'-'} (${form.emergencyRelation||'-'}) - ${form.emergencyPhone||'-'}`]]} />
                       
-                      {(form.passportNumber || form.healthNotes || form.vaccineMeningitis) && (
-                        <SummaryBlock title="Dokumen & Medis" icon={Shield} items={[
-                          ...(form.passportNumber ? [['No. Paspor', form.passportNumber], ['Berlaku s/d', form.passportExpiry||'-']] : []),
-                          ['Vaksin Meningitis', form.vaccineMeningitis ? 'Sudah Dilakukan' : 'Belum Dilakukan'],
-                          ...(form.healthNotes ? [['Catatan Medis Khusus', form.healthNotes]] : [])
-                        ]} />
+                      {form.passportNumber && (
+                        <SummaryBlock title="Informasi Paspor" icon={Shield} items={[['No. Paspor', form.passportNumber],['Tanggal Terbit', form.passportIssued||'-'],['Kadaluarsa', form.passportExpiry||'-'],['Tempat Penerbitan', form.passportPlace||'-']]} />
                       )}
+
+                      <SummaryBlock title="Kesehatan & Ibadah" icon={Heart} items={[['Penyakit', form.hasDiseases ? (form.diseaseNotes||'Ya') : 'Tidak ada'],['Kebutuhan Khusus', form.specialNeeds ? 'Ya' : 'Tidak'],['Kursi Roda', form.wheelchair ? 'Ya' : 'Tidak'],['Pengalaman Umrah', form.previousUmrah ? 'Pernah' : 'Belum'],['Pengalaman Haji', form.previousHajj ? 'Pernah' : 'Belum']]} />
 
                       {form.packageId && (() => {
                         const p = packages.find(x => x.id === form.packageId);
@@ -454,6 +525,35 @@ export default function RegisterPage() {
                         ) : null;
                       })()}
                     </div>
+
+                    {/* Syarat dan Ketentuan */}
+                    <div className="border-2 border-[#3a0519]/10 rounded-2xl overflow-hidden bg-[#fdf2f4]">
+                      <div className="p-6">
+                        <h4 className="text-base font-bold text-[#3a0519] mb-4 flex items-center gap-2">
+                          <span className="w-2 h-2 rounded-full bg-[#3a0519]" /> Persyaratan Umum
+                        </h4>
+                        <ul className="space-y-2 text-sm text-gray-700">
+                          <li className="flex items-start gap-2"><span className="text-[#3a0519] mt-1">•</span> Paspor masih berlaku minimal 6 bulan</li>
+                          <li className="flex items-start gap-2"><span className="text-[#3a0519] mt-1">•</span> Sertifikat vaksin meningitis</li>
+                          <li className="flex items-start gap-2"><span className="text-[#3a0519] mt-1">•</span> Sertifikat vaksin polio (bila diperlukan)</li>
+                          <li className="flex items-start gap-2"><span className="text-[#3a0519] mt-1">•</span> Membayar biaya pendaftaran</li>
+                          <li className="flex items-start gap-2"><span className="text-[#3a0519] mt-1">•</span> Mengikuti briefing sebelum keberangkatan</li>
+                        </ul>
+                      </div>
+                    </div>
+
+                    <label className="flex items-start gap-4 p-5 border-2 border-gray-100 rounded-xl cursor-pointer hover:border-[#3a0519]/30 hover:bg-[#faf8f9] transition-all group">
+                      <div className={`w-6 h-6 rounded flex items-center justify-center transition-all mt-0.5 flex-shrink-0 ${form.agreedTerms ? 'bg-[#3a0519] shadow-md scale-105' : 'bg-gray-100 group-hover:bg-gray-200'}`}>
+                        {form.agreedTerms && <Check size={14} className="text-white" strokeWidth={3} />}
+                      </div>
+                      <input type="checkbox" checked={form.agreedTerms} onChange={e => set('agreedTerms', e.target.checked)} className="hidden" />
+                      <div>
+                        <p className={`text-sm font-bold ${form.agreedTerms ? 'text-[#3a0519]' : 'text-gray-800'}`}>
+                          Saya telah membaca dan menyetujui <span className="underline text-[#3a0519] font-bold">syarat dan ketentuan</span> yang berlaku untuk perjalanan umrah ini.
+                        </p>
+                        <p className="text-xs text-gray-500 mt-1">Saya memahami bahwa semua informasi yang saya berikan adalah benar dan dapat dipertanggungjawabkan.</p>
+                      </div>
+                    </label>
                   </div>
                 )}
               </div>

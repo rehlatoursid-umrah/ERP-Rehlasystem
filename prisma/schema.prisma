@@ -43,27 +43,41 @@ model Customer {
   birthDate       DateTime?
   birthPlace      String?
   nik             String?   // NIK KTP
+  fatherName      String?   // Nama Ayah
+  motherName      String?   // Nama Ibu
+  maritalStatus   String?   // SINGLE, MARRIED, DIVORCED, WIDOWED
+  occupation      String?   // Pekerjaan
   phone           String?
   whatsapp        String?
   email           String?
   address         String?
   city            String?
   province        String?
+  postalCode      String?   // Kode Pos
   // Data Paspor
   passportNumber  String?
   passportExpiry  DateTime?
   passportIssued  DateTime?
+  passportPlace   String?   // Tempat Penerbitan Paspor
   passportPhoto   String?   // URL to stored file
   // Data Kesehatan
   bloodType       String?
   healthNotes     String?
   vaccineMeningitis Boolean @default(false)
   vaccineDate     DateTime?
+  hasDiseases     Boolean   @default(false)
+  diseaseNotes    String?   // Jenis penyakit
+  specialNeeds    Boolean   @default(false)
+  wheelchair      Boolean   @default(false)
+  // Pengalaman Ibadah
+  previousUmrah   Boolean   @default(false)
+  previousHajj    Boolean   @default(false)
   // Data Emergency
   emergencyName   String?
   emergencyPhone  String?
   emergencyRelation String?
   // Meta
+  agreedTerms     Boolean   @default(false)
   notes           String?
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
