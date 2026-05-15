@@ -226,7 +226,6 @@ export default function CustomersPage() {
                   <div>
                     <p className="text-xs text-[#a77a0b] font-bold uppercase tracking-wider mb-1">Detail Jamaah</p>
                     <h3 className="text-lg font-bold">{selectedCustomer.fullName}</h3>
-                    {selectedCustomer.nickname && <p className="text-sm text-white/70 mt-0.5">"{selectedCustomer.nickname}"</p>}
                   </div>
                   <button onClick={() => setSelectedCustomer(null)} className="text-white/50 hover:text-white p-1"><X size={18}/></button>
                 </div>
@@ -351,7 +350,6 @@ export default function CustomersPage() {
                 <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Data Pribadi</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Input label="Nama Lengkap *" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Sesuai paspor" />
-                  <Input label="Nama Panggilan" value={form.nickname} onChange={e => setForm({...form, nickname: e.target.value})} />
                   <Select label="Jenis Kelamin" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} options={[{value:'',label:'Pilih...'},{value:'MALE',label:'Laki-laki'},{value:'FEMALE',label:'Perempuan'}]} />
                   <Input label="NIK" value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} placeholder="16 digit" />
                   <Input label="Tempat Lahir" value={form.birthPlace} onChange={e => setForm({...form, birthPlace: e.target.value})} />
