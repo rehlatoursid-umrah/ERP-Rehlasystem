@@ -272,8 +272,8 @@ export async function POST(request: Request) {
         ].join('\n');
 
         console.log('[WA-Customer] Sending greeting to:', customerPhone);
-        await sendWhatsAppMessage(customerPhone, greetingMsg);
-        console.log('[WA-Customer] Greeting sent successfully');
+        const greetingSent = await sendWhatsAppMessage(customerPhone, greetingMsg);
+        console.log('[WA-Customer] Greeting result:', greetingSent ? 'SUCCESS' : 'FAILED');
 
         // Send PDF file if available
         if (pdfUrl) {
@@ -288,8 +288,8 @@ export async function POST(request: Request) {
             `www.rehlatours.id`,
           ].join('\n');
           console.log('[WA-Customer] Sending PDF file...');
-          await sendWhatsAppFile(customerPhone, pdfUrl, pdfCaption, `Konfirmasi-${customer.fullName.replace(/\s+/g, '-')}.pdf`);
-          console.log('[WA-Customer] PDF sent successfully');
+          const fileSent = await sendWhatsAppFile(customerPhone, pdfUrl, pdfCaption, `Konfirmasi-${customer.fullName.replace(/\s+/g, '-')}.pdf`);
+          console.log('[WA-Customer] PDF result:', fileSent ? 'SUCCESS' : 'FAILED');
         }
       } catch (e: any) {
         console.error('[WA-Customer] Failed:', e?.message || e);

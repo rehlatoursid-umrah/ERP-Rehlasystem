@@ -17,7 +17,6 @@ export async function sendWhatsAppMessage(targetPhone: string, message: string) 
       headers['Authorization'] = `Basic ${encodedAuth}`;
     }
 
-    // Usually the text message endpoint is /send/message
     const response = await fetch(`${BASE_URL}/send/message`, {
       method: 'POST',
       headers,
@@ -37,7 +36,8 @@ export async function sendWhatsAppMessage(targetPhone: string, message: string) 
   }
 }
 
-// Send a file (PDF, image, etc.) via WhatsApp
+// Send a document file via WhatsApp
+// Downloads the file from URL, then sends as binary document
 export async function sendWhatsAppFile(targetPhone: string, fileUrl: string, caption: string, fileName?: string) {
   try {
     const BASE_URL = (process.env.WA_API_URL || 'https://gowa-veqeqo5hgucr.cgk-robin.sumopod.my.id').replace(/\/$/, '');
@@ -46,11 +46,16 @@ export async function sendWhatsAppFile(targetPhone: string, fileUrl: string, cap
     let phone = targetPhone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
 
-    const payload = new FormData();
-    payload.append('phone', phone);
-    payload.append('url', fileUrl);
-    payload.append('caption', caption);
-    if (fileName) payload.append('filename', fileName);
+    // Download the file from R2 URL first
+    console.log('[WA-File] Downloading file from:', fileUrl);
+    const fileResponse = await fetch(fileUrl);
+    if (!fileResponse.ok) {
+      console.error('[WA-File] Failed to download file:', fileResponse.status);
+      return false;
+    }
+    const fileBuffer = Buffer.from(await fileResponse.arrayBuffer());
+    const finalFileName = fileName || 'document.pdf';
+    console.log('[WA-File] File downloaded, size:', fileBuffer.length, 'bytes');
 
     const headers: HeadersInit = {};
     if (WA_AUTH) {
@@ -58,21 +63,54 @@ export async function sendWhatsAppFile(targetPhone: string, fileUrl: string, cap
       headers['Authorization'] = `Basic ${encodedAuth}`;
     }
 
-    const response = await fetch(`${BASE_URL}/send/file`, {
+    // Create a Blob from the buffer for FormData
+    const fileBlob = new Blob([fileBuffer], { type: 'application/pdf' });
+
+    // Try method 1: /send/document with binary file
+    const payload = new FormData();
+    payload.append('phone', phone);
+    payload.append('caption', caption);
+    payload.append('document', fileBlob, finalFileName);
+
+    console.log('[WA-File] Sending document to:', phone);
+    let response = await fetch(`${BASE_URL}/send/document`, {
       method: 'POST',
       headers,
       body: payload
     });
 
+    // Fallback: try /send/file with binary
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`WhatsApp File API Error (${response.status}):`, errorText);
-      return false;
+      const errText1 = await response.text();
+      console.warn('[WA-File] /send/document failed:', response.status, errText1);
+
+      const payload2 = new FormData();
+      payload2.append('phone', phone);
+      payload2.append('caption', caption);
+      payload2.append('file', fileBlob, finalFileName);
+
+      response = await fetch(`${BASE_URL}/send/file`, {
+        method: 'POST',
+        headers,
+        body: payload2
+      });
+
+      if (!response.ok) {
+        const errText2 = await response.text();
+        console.error('[WA-File] /send/file also failed:', response.status, errText2);
+
+        // Fallback 2: try /send/message with the URL as text
+        console.log('[WA-File] Falling back to text message with download link');
+        const linkMsg = `${caption}\n\n📥 Download dokumen:\n${fileUrl}`;
+        return sendWhatsAppMessage(phone, linkMsg);
+      }
     }
 
+    const result = await response.text();
+    console.log('[WA-File] Document sent successfully:', result);
     return true;
   } catch (error) {
-    console.error('Failed to send WhatsApp file:', error);
+    console.error('[WA-File] Failed to send WhatsApp file:', error);
     return false;
   }
 }
