@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from 'react';
+import React, { useState } from 'react';
 import './install.css';
 
 type DeviceTab = 'iphone' | 'android' | 'mac' | 'windows';
 
-const DEVICE_TABS: { id: DeviceTab; label: string; icon: JSX.Element }[] = [
+const DEVICE_TABS: { id: DeviceTab; label: string; icon: React.ReactNode }[] = [
   {
     id: 'iphone', label: 'iPhone / iPad',
     icon: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><rect x="6" y="2" width="12" height="20" rx="3"/><line x1="12" y1="18" x2="12" y2="18.01" strokeWidth="2" strokeLinecap="round"/></svg>
