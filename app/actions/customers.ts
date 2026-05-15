@@ -21,7 +21,7 @@ export async function getCustomers(search?: string) {
     orderBy: { createdAt: 'desc' },
     include: {
       bookings: { select: { id: true, status: true, priceTotal: true } },
-      documents: { select: { id: true, category: true, status: true } },
+      documents: { select: { id: true, category: true, status: true, fileUrl: true, fileName: true } },
     }
   });
   return customers;

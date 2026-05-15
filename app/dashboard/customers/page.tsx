@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { Users, Plus, Search, Trash2, Edit, Eye, Phone, Mail, MapPin, FileText, X, ChevronRight, Shield, Loader2 } from 'lucide-react';
+import { Users, Plus, Search, Trash2, Edit, Eye, Phone, Mail, MapPin, FileText, X, ChevronRight, Shield, Loader2, ImageIcon } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerStats } from '@/app/actions/customers';
 import { Input, Textarea, Select } from '@/app/components/ui/Input';
@@ -273,6 +273,27 @@ export default function CustomersPage() {
                     </a>
                   )}
                 </div>
+
+                {/* Dokumen (KTP & Paspor) */}
+                {selectedCustomer.documents && selectedCustomer.documents.length > 0 && (
+                  <div className="border-t pt-4">
+                    <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Dokumen Terunggah</p>
+                    <div className="space-y-2">
+                      {selectedCustomer.documents.map((doc: any) => (
+                        <a key={doc.id} href={doc.fileUrl} target="_blank" rel="noreferrer" className="flex items-center gap-3 p-2.5 rounded-lg border border-gray-100 hover:bg-gray-50 transition-colors group">
+                          <div className={`p-2 rounded-lg ${doc.category === 'KTP' ? 'bg-blue-50 text-blue-600' : doc.category === 'PASSPORT' ? 'bg-green-50 text-green-600' : 'bg-gray-50 text-gray-500'}`}>
+                            {doc.category === 'KTP' ? <ImageIcon size={16}/> : <FileText size={16}/>}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{doc.category === 'KTP' ? 'Foto KTP' : doc.category === 'PASSPORT' ? 'Foto Paspor' : doc.fileName}</p>
+                            <p className="text-[10px] text-gray-400">{doc.category}</p>
+                          </div>
+                          <Eye size={14} className="text-gray-300 group-hover:text-gray-500"/>
+                        </a>
+                      ))}
+                    </div>
+                  </div>
+                )}
 
                 {/* Health & Ibadah */}
                 <div className="border-t pt-4">
