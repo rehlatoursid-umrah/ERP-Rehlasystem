@@ -137,7 +137,7 @@ const relationLabel = (r?: string) => {
   return map[r || ''] || r || '-';
 };
 
-const LOGO_URL = 'https://pub-2fbb4f527520457d9ad18e98bbb1d498.r2.dev/rehlasticky.png';
+const LOGO_URL = (process.env.NEXT_PUBLIC_APP_URL || process.env.NEXTAUTH_URL || 'https://erp.rehlatours.id') + '/rehlasticky.png';
 
 export function RegistrationConfirmationPdf({ data }: { data: RegistrationPdfData }) {
   return (
