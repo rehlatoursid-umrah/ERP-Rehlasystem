@@ -12,6 +12,7 @@ export async function getCustomers(search?: string) {
       { passportNumber: { contains: search } },
       { email: { contains: search } },
       { city: { contains: search } },
+      { nik: { contains: search } },
     ]
   } : {};
 
@@ -52,22 +53,36 @@ export async function createCustomer(data: {
   birthDate?: string;
   birthPlace?: string;
   nik?: string;
+  fatherName?: string;
+  motherName?: string;
+  maritalStatus?: string;
+  occupation?: string;
   phone?: string;
   whatsapp?: string;
   email?: string;
   address?: string;
   city?: string;
   province?: string;
+  postalCode?: string;
   passportNumber?: string;
   passportExpiry?: string;
   passportIssued?: string;
+  passportPlace?: string;
+  passportPhoto?: string;
   bloodType?: string;
   healthNotes?: string;
   vaccineMeningitis?: boolean;
   vaccineDate?: string;
+  hasDiseases?: boolean;
+  diseaseNotes?: string;
+  specialNeeds?: boolean;
+  wheelchair?: boolean;
+  previousUmrah?: boolean;
+  previousHajj?: boolean;
   emergencyName?: string;
   emergencyPhone?: string;
   emergencyRelation?: string;
+  agreedTerms?: boolean;
   notes?: string;
 }) {
   const customer = await db.customer.create({
@@ -78,22 +93,36 @@ export async function createCustomer(data: {
       birthDate: data.birthDate ? new Date(data.birthDate) : null,
       birthPlace: data.birthPlace || null,
       nik: data.nik || null,
+      fatherName: data.fatherName || null,
+      motherName: data.motherName || null,
+      maritalStatus: data.maritalStatus || null,
+      occupation: data.occupation || null,
       phone: data.phone || null,
       whatsapp: data.whatsapp || null,
       email: data.email || null,
       address: data.address || null,
       city: data.city || null,
       province: data.province || null,
+      postalCode: data.postalCode || null,
       passportNumber: data.passportNumber || null,
       passportExpiry: data.passportExpiry ? new Date(data.passportExpiry) : null,
       passportIssued: data.passportIssued ? new Date(data.passportIssued) : null,
+      passportPlace: data.passportPlace || null,
+      passportPhoto: data.passportPhoto || null,
       bloodType: data.bloodType || null,
       healthNotes: data.healthNotes || null,
       vaccineMeningitis: data.vaccineMeningitis || false,
       vaccineDate: data.vaccineDate ? new Date(data.vaccineDate) : null,
+      hasDiseases: data.hasDiseases || false,
+      diseaseNotes: data.diseaseNotes || null,
+      specialNeeds: data.specialNeeds || false,
+      wheelchair: data.wheelchair || false,
+      previousUmrah: data.previousUmrah || false,
+      previousHajj: data.previousHajj || false,
       emergencyName: data.emergencyName || null,
       emergencyPhone: data.emergencyPhone || null,
       emergencyRelation: data.emergencyRelation || null,
+      agreedTerms: data.agreedTerms || false,
       notes: data.notes || null,
     }
   });
@@ -108,22 +137,36 @@ export async function updateCustomer(id: string, data: {
   birthDate?: string;
   birthPlace?: string;
   nik?: string;
+  fatherName?: string;
+  motherName?: string;
+  maritalStatus?: string;
+  occupation?: string;
   phone?: string;
   whatsapp?: string;
   email?: string;
   address?: string;
   city?: string;
   province?: string;
+  postalCode?: string;
   passportNumber?: string;
   passportExpiry?: string;
   passportIssued?: string;
+  passportPlace?: string;
+  passportPhoto?: string;
   bloodType?: string;
   healthNotes?: string;
   vaccineMeningitis?: boolean;
   vaccineDate?: string;
+  hasDiseases?: boolean;
+  diseaseNotes?: string;
+  specialNeeds?: boolean;
+  wheelchair?: boolean;
+  previousUmrah?: boolean;
+  previousHajj?: boolean;
   emergencyName?: string;
   emergencyPhone?: string;
   emergencyRelation?: string;
+  agreedTerms?: boolean;
   notes?: string;
 }) {
   const updateData: Record<string, unknown> = {};

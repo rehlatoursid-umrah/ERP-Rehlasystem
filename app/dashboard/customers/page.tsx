@@ -26,9 +26,12 @@ export default function CustomersPage() {
   // Form state
   const [form, setForm] = useState({
     fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '',
-    nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '',
-    passportNumber: '', passportExpiry: '', passportIssued: '', passportPhoto: '',
+    nik: '', fatherName: '', motherName: '', maritalStatus: '', occupation: '',
+    phone: '', whatsapp: '', email: '', address: '', city: '', province: '', postalCode: '',
+    passportNumber: '', passportExpiry: '', passportIssued: '', passportPlace: '', passportPhoto: '',
     bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '',
+    hasDiseases: false, diseaseNotes: '', specialNeeds: false, wheelchair: false,
+    previousUmrah: false, previousHajj: false,
     emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '',
   });
   const [isUploading, setIsUploading] = useState(false);
@@ -46,7 +49,7 @@ export default function CustomersPage() {
   useEffect(() => { loadData(); }, [search]);
 
   const resetForm = () => {
-    setForm({ fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '', nik: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '', passportNumber: '', passportExpiry: '', passportIssued: '', passportPhoto: '', bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '', emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '' });
+    setForm({ fullName: '', nickname: '', gender: '', birthDate: '', birthPlace: '', nik: '', fatherName: '', motherName: '', maritalStatus: '', occupation: '', phone: '', whatsapp: '', email: '', address: '', city: '', province: '', postalCode: '', passportNumber: '', passportExpiry: '', passportIssued: '', passportPlace: '', passportPhoto: '', bloodType: '', healthNotes: '', vaccineMeningitis: false, vaccineDate: '', hasDiseases: false, diseaseNotes: '', specialNeeds: false, wheelchair: false, previousUmrah: false, previousHajj: false, emergencyName: '', emergencyPhone: '', emergencyRelation: '', notes: '' });
     setEditingId(null);
   };
 
@@ -54,15 +57,23 @@ export default function CustomersPage() {
     setForm({
       fullName: c.fullName || '', nickname: c.nickname || '', gender: c.gender || '',
       birthDate: c.birthDate ? new Date(c.birthDate).toISOString().split('T')[0] : '',
-      birthPlace: c.birthPlace || '', nik: c.nik || '', phone: c.phone || '',
-      whatsapp: c.whatsapp || '', email: c.email || '', address: c.address || '',
-      city: c.city || '', province: c.province || '', passportNumber: c.passportNumber || '',
+      birthPlace: c.birthPlace || '', nik: c.nik || '',
+      fatherName: (c as any).fatherName || '', motherName: (c as any).motherName || '',
+      maritalStatus: (c as any).maritalStatus || '', occupation: (c as any).occupation || '',
+      phone: c.phone || '', whatsapp: c.whatsapp || '', email: c.email || '',
+      address: c.address || '', city: c.city || '', province: c.province || '',
+      postalCode: (c as any).postalCode || '',
+      passportNumber: c.passportNumber || '',
       passportExpiry: c.passportExpiry ? new Date(c.passportExpiry).toISOString().split('T')[0] : '',
       passportIssued: c.passportIssued ? new Date(c.passportIssued).toISOString().split('T')[0] : '',
+      passportPlace: (c as any).passportPlace || '',
       passportPhoto: c.passportPhoto || '',
       bloodType: c.bloodType || '', healthNotes: c.healthNotes || '',
       vaccineMeningitis: c.vaccineMeningitis || false,
       vaccineDate: c.vaccineDate ? new Date(c.vaccineDate).toISOString().split('T')[0] : '',
+      hasDiseases: (c as any).hasDiseases || false, diseaseNotes: (c as any).diseaseNotes || '',
+      specialNeeds: (c as any).specialNeeds || false, wheelchair: (c as any).wheelchair || false,
+      previousUmrah: (c as any).previousUmrah || false, previousHajj: (c as any).previousHajj || false,
       emergencyName: c.emergencyName || '', emergencyPhone: c.emergencyPhone || '',
       emergencyRelation: c.emergencyRelation || '', notes: c.notes || '',
     });
@@ -228,7 +239,7 @@ export default function CustomersPage() {
                     {selectedCustomer.phone && <p className="text-sm flex items-center gap-2"><Phone size={14} className="text-gray-400"/>{selectedCustomer.phone}</p>}
                     {selectedCustomer.whatsapp && <p className="text-sm flex items-center gap-2"><Phone size={14} className="text-green-500"/>{selectedCustomer.whatsapp} <span className="text-[10px] text-green-600 bg-green-50 px-1.5 py-0.5 rounded">WA</span></p>}
                     {selectedCustomer.email && <p className="text-sm flex items-center gap-2"><Mail size={14} className="text-gray-400"/>{selectedCustomer.email}</p>}
-                    {selectedCustomer.city && <p className="text-sm flex items-center gap-2"><MapPin size={14} className="text-gray-400"/>{selectedCustomer.city}{selectedCustomer.province ? `, ${selectedCustomer.province}` : ''}</p>}
+                    {(selectedCustomer.address || selectedCustomer.city) && <p className="text-sm flex items-center gap-2"><MapPin size={14} className="text-gray-400"/>{[selectedCustomer.address, selectedCustomer.city, selectedCustomer.province, (selectedCustomer as any).postalCode].filter(Boolean).join(', ')}</p>}
                   </div>
                 </div>
 
@@ -237,9 +248,13 @@ export default function CustomersPage() {
                   <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Identitas</p>
                   <div className="grid grid-cols-2 gap-3 text-sm">
                     <div><p className="text-[10px] text-gray-400">NIK</p><p className="font-medium">{selectedCustomer.nik || '-'}</p></div>
-                    <div><p className="text-[10px] text-gray-400">Gender</p><p className="font-medium">{selectedCustomer.gender || '-'}</p></div>
-                    <div><p className="text-[10px] text-gray-400">Tgl Lahir</p><p className="font-medium">{formatDate(selectedCustomer.birthDate)}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Gender</p><p className="font-medium">{selectedCustomer.gender === 'MALE' ? 'Laki-laki' : selectedCustomer.gender === 'FEMALE' ? 'Perempuan' : '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Tempat, Tgl Lahir</p><p className="font-medium">{selectedCustomer.birthPlace || '-'}, {formatDate(selectedCustomer.birthDate)}</p></div>
                     <div><p className="text-[10px] text-gray-400">Gol. Darah</p><p className="font-medium">{selectedCustomer.bloodType || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Nama Ayah</p><p className="font-medium">{(selectedCustomer as any).fatherName || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Nama Ibu</p><p className="font-medium">{(selectedCustomer as any).motherName || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Status Pernikahan</p><p className="font-medium">{{SINGLE:'Belum Menikah',MARRIED:'Menikah',DIVORCED:'Cerai',WIDOWED:'Janda/Duda'}[(selectedCustomer as any).maritalStatus || ''] || '-'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Pekerjaan</p><p className="font-medium">{(selectedCustomer as any).occupation || '-'}</p></div>
                   </div>
                 </div>
 
@@ -249,12 +264,28 @@ export default function CustomersPage() {
                   <div className="grid grid-cols-2 gap-3 text-sm mb-3">
                     <div><p className="text-[10px] text-gray-400">Nomor</p><p className="font-medium font-mono">{selectedCustomer.passportNumber || '-'}</p></div>
                     <div><p className="text-[10px] text-gray-400">Berlaku s/d</p><p className="font-medium">{formatDate(selectedCustomer.passportExpiry)}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Tgl Terbit</p><p className="font-medium">{formatDate(selectedCustomer.passportIssued)}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Tempat Terbit</p><p className="font-medium">{(selectedCustomer as any).passportPlace || '-'}</p></div>
                   </div>
                   {selectedCustomer.passportPhoto && (
                     <a href={selectedCustomer.passportPhoto} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 text-xs font-medium text-[#a77a0b] bg-[#a77a0b]/10 px-3 py-1.5 rounded-lg hover:bg-[#a77a0b]/20 transition-colors">
                       <FileText size={14} /> Lihat File Paspor
                     </a>
                   )}
+                </div>
+
+                {/* Health & Ibadah */}
+                <div className="border-t pt-4">
+                  <p className="text-[10px] font-bold text-gray-400 uppercase mb-2">Kesehatan & Pengalaman Ibadah</p>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div><p className="text-[10px] text-gray-400">Penyakit</p><p className="font-medium">{(selectedCustomer as any).hasDiseases ? ((selectedCustomer as any).diseaseNotes || 'Ya') : 'Tidak ada'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Kebutuhan Khusus</p><p className="font-medium">{(selectedCustomer as any).specialNeeds ? 'Ya' : 'Tidak'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Kursi Roda</p><p className="font-medium">{(selectedCustomer as any).wheelchair ? 'Ya' : 'Tidak'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Vaksin Meningitis</p><p className="font-medium">{selectedCustomer.vaccineMeningitis ? `Ya (${formatDate(selectedCustomer.vaccineDate)})` : 'Belum'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Pengalaman Umrah</p><p className="font-medium">{(selectedCustomer as any).previousUmrah ? 'Pernah' : 'Belum'}</p></div>
+                    <div><p className="text-[10px] text-gray-400">Pengalaman Haji</p><p className="font-medium">{(selectedCustomer as any).previousHajj ? 'Pernah' : 'Belum'}</p></div>
+                  </div>
+                  {selectedCustomer.healthNotes && <p className="text-xs text-gray-500 bg-gray-50 p-2 rounded mt-2">{selectedCustomer.healthNotes}</p>}
                 </div>
 
                 {/* Emergency */}
@@ -301,9 +332,13 @@ export default function CustomersPage() {
                   <Input label="Nama Lengkap *" value={form.fullName} onChange={e => setForm({...form, fullName: e.target.value})} placeholder="Sesuai paspor" />
                   <Input label="Nama Panggilan" value={form.nickname} onChange={e => setForm({...form, nickname: e.target.value})} />
                   <Select label="Jenis Kelamin" value={form.gender} onChange={e => setForm({...form, gender: e.target.value})} options={[{value:'',label:'Pilih...'},{value:'MALE',label:'Laki-laki'},{value:'FEMALE',label:'Perempuan'}]} />
+                  <Input label="NIK" value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} placeholder="16 digit" />
                   <Input label="Tempat Lahir" value={form.birthPlace} onChange={e => setForm({...form, birthPlace: e.target.value})} />
                   <Input type="date" label="Tanggal Lahir" value={form.birthDate} onChange={e => setForm({...form, birthDate: e.target.value})} />
-                  <Input label="NIK" value={form.nik} onChange={e => setForm({...form, nik: e.target.value})} placeholder="16 digit" />
+                  <Input label="Nama Ayah" value={form.fatherName} onChange={e => setForm({...form, fatherName: e.target.value})} />
+                  <Input label="Nama Ibu" value={form.motherName} onChange={e => setForm({...form, motherName: e.target.value})} />
+                  <Select label="Status Pernikahan" value={form.maritalStatus} onChange={e => setForm({...form, maritalStatus: e.target.value})} options={[{value:'',label:'Pilih...'},{value:'SINGLE',label:'Belum Menikah'},{value:'MARRIED',label:'Menikah'},{value:'DIVORCED',label:'Cerai'},{value:'WIDOWED',label:'Janda/Duda'}]} />
+                  <Input label="Pekerjaan" value={form.occupation} onChange={e => setForm({...form, occupation: e.target.value})} />
                 </div>
               </div>
 
@@ -319,6 +354,7 @@ export default function CustomersPage() {
                     <Input label="Alamat Lengkap" value={form.address} onChange={e => setForm({...form, address: e.target.value})} />
                   </div>
                   <Input label="Provinsi" value={form.province} onChange={e => setForm({...form, province: e.target.value})} />
+                  <Input label="Kode Pos" value={form.postalCode} onChange={e => setForm({...form, postalCode: e.target.value})} />
                 </div>
               </div>
 
@@ -329,8 +365,9 @@ export default function CustomersPage() {
                   <Input label="Nomor Paspor" value={form.passportNumber} onChange={e => setForm({...form, passportNumber: e.target.value})} className="font-mono" />
                   <Input type="date" label="Tgl Terbit" value={form.passportIssued} onChange={e => setForm({...form, passportIssued: e.target.value})} />
                   <Input type="date" label="Berlaku s/d" value={form.passportExpiry} onChange={e => setForm({...form, passportExpiry: e.target.value})} />
+                  <Input label="Tempat Terbit" value={form.passportPlace} onChange={e => setForm({...form, passportPlace: e.target.value})} placeholder="Kantor Imigrasi..." />
                   
-                  <div className="md:col-span-3">
+                  <div className="md:col-span-2">
                     <label className="block text-xs font-medium text-gray-500 mb-1.5">Foto Paspor (Upload)</label>
                     <div className="flex items-center gap-4">
                       {form.passportPhoto ? (
@@ -347,18 +384,14 @@ export default function CustomersPage() {
                         onChange={async (e) => {
                           const file = e.target.files?.[0];
                           if (!file) return;
-                          
                           setIsUploading(true);
                           const toastId = toast.loading("Mengunggah paspor...");
-                          
                           try {
                             const formData = new FormData();
                             formData.append('file', file);
                             formData.append('folder', 'passports');
-                            
                             const { uploadAction } = await import('@/app/actions/storage');
                             const res = await uploadAction(formData);
-                            
                             if (res.success && res.url) {
                               setForm({...form, passportPhoto: res.url});
                               toast.success("Paspor berhasil diunggah", { id: toastId });
@@ -369,7 +402,6 @@ export default function CustomersPage() {
                             toast.error("Terjadi kesalahan jaringan", { id: toastId });
                           } finally {
                             setIsUploading(false);
-                            // Reset input
                             e.target.value = '';
                           }
                         }}
@@ -394,7 +426,41 @@ export default function CustomersPage() {
                   </div>
                   <Input type="date" label="Tgl Vaksin" value={form.vaccineDate} onChange={e => setForm({...form, vaccineDate: e.target.value})} />
                 </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={form.hasDiseases} onChange={e => setForm({...form, hasDiseases: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                      Memiliki Penyakit
+                    </label>
+                    {form.hasDiseases && <Input label="Jenis Penyakit" value={form.diseaseNotes} onChange={e => setForm({...form, diseaseNotes: e.target.value})} placeholder="Diabetes, Asma, dll." />}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={form.specialNeeds} onChange={e => setForm({...form, specialNeeds: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                      Kebutuhan Khusus
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={form.wheelchair} onChange={e => setForm({...form, wheelchair: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                      Membutuhkan Kursi Roda
+                    </label>
+                  </div>
+                </div>
                 <Textarea label="Catatan Kesehatan" value={form.healthNotes} onChange={e => setForm({...form, healthNotes: e.target.value})} rows={2} className="mt-4" placeholder="Alergi, riwayat penyakit, dsb." />
+              </div>
+
+              {/* Ibadah Experience */}
+              <div>
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-3">Pengalaman Ibadah</p>
+                <div className="flex gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                    <input type="checkbox" checked={form.previousUmrah} onChange={e => setForm({...form, previousUmrah: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                    Pernah Umrah
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                    <input type="checkbox" checked={form.previousHajj} onChange={e => setForm({...form, previousHajj: e.target.checked})} className="rounded border-gray-300 text-[#3a0519] focus:ring-[#3a0519]" />
+                    Pernah Haji
+                  </label>
+                </div>
               </div>
 
               {/* Emergency */}
