@@ -219,35 +219,84 @@ export async function POST(request: Request) {
         customerId: customer.id,
       };
 
+      console.log('[PDF] Starting PDF generation for:', customer.fullName);
       const pdfBuffer = await renderToBuffer(
         React.createElement(RegistrationConfirmationPdf, { data: pdfData })
       );
+      console.log('[PDF] PDF buffer generated, size:', pdfBuffer.length);
 
       // Upload PDF to R2
       const { uploadFileToR2 } = await import('@/app/lib/s3');
       const fileName = `Konfirmasi-Pendaftaran-${customer.fullName.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
       pdfUrl = await uploadFileToR2(Buffer.from(pdfBuffer), fileName, 'application/pdf', 'confirmations');
-      console.log('PDF generated and uploaded:', pdfUrl);
-    } catch (e) {
-      console.error('Failed to generate PDF:', e);
+      console.log('[PDF] PDF uploaded to R2:', pdfUrl);
+    } catch (e: any) {
+      console.error('[PDF] Failed to generate PDF:', e?.message || e);
+      console.error('[PDF] Stack:', e?.stack);
     }
 
-    // 2. Send PDF to Customer via WhatsApp
-    if (pdfUrl && customerPhone) {
+    // 2. Send WhatsApp to Customer (ALWAYS send greeting, PDF optional)
+    if (customerPhone) {
       try {
         const { sendWhatsAppFile, sendWhatsAppMessage } = await import('@/app/lib/whatsapp');
 
-        // Send greeting message first
-        const greetingMsg = `بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\n\nAssalamu'alaikum Warahmatullahi Wabarakatuh,\n\n*${customer.fullName}* yang dirahmati Allah ﷻ\n\nTerima kasih telah mendaftarkan diri di *Rehlatours Indonesia* 🕋\n\nPendaftaran Anda telah kami terima dan tercatat dalam sistem kami pada:\n📅 *${registrationDate}*\n🆔 *Reg. ID: ${customer.id.slice(0, 8).toUpperCase()}*${booking ? `\n\n📝 *Detail Booking:*\n▸ Kode Booking: *${booking.bookingCode}*\n▸ Paket: *${pkgInfo?.name || '-'}* (${pkgInfo?.type || '-'})\n▸ Tipe Kamar: *${booking.roomType}*\n▸ Total: *Rp ${booking.priceTotal.toLocaleString('id-ID')}*` : ''}\n\nBerikut terlampir dokumen konfirmasi pendaftaran Anda beserta Syarat & Ketentuan yang berlaku.\n\nUntuk informasi lebih lanjut, silakan hubungi:\n📞 *+6283197321658*\n🌐 *www.rehlatours.id*\n\nSemoga Allah ﷻ memudahkan perjalanan ibadah Anda.\n\nجَزَاكَ ٱللَّٰهُ خَيْرًا\n\n*Tim Rehlatours Indonesia* 🤍`;
-        await sendWhatsAppMessage(customerPhone, greetingMsg);
+        // Build greeting message with proper newlines
+        const bookingDetail = booking
+          ? `\n\n📝 *Detail Booking:*\n▸ Kode Booking: *${booking.bookingCode}*\n▸ Paket: *${pkgInfo?.name || '-'}* (${pkgInfo?.type || '-'})\n▸ Tipe Kamar: *${booking.roomType}*\n▸ Total: *Rp ${booking.priceTotal.toLocaleString('id-ID')}*`
+          : '';
 
-        // Send PDF file
-        await new Promise(resolve => setTimeout(resolve, 2000)); // Small delay between messages
-        const pdfCaption = `📋 Dokumen Konfirmasi Pendaftaran\n${customer.fullName}\n${registrationDate}${booking ? `\nBooking: ${booking.bookingCode}` : ''}\n\n*Rehlatours Indonesia*\nwww.rehlatours.id`;
-        await sendWhatsAppFile(customerPhone, pdfUrl, pdfCaption, `Konfirmasi-${customer.fullName.replace(/\s+/g, '-')}.pdf`);
-      } catch (e) {
-        console.error('Failed to send customer WhatsApp:', e);
+        const greetingMsg = [
+          `بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ`,
+          ``,
+          `Assalamu'alaikum Warahmatullahi Wabarakatuh,`,
+          ``,
+          `*${customer.fullName}* yang dirahmati Allah ﷻ`,
+          ``,
+          `Terima kasih telah mendaftarkan diri di *Rehlatours Indonesia* 🕋`,
+          ``,
+          `Pendaftaran Anda telah kami terima dan tercatat dalam sistem kami pada:`,
+          `📅 *${registrationDate}*`,
+          `🆔 *Reg. ID: ${customer.id.slice(0, 8).toUpperCase()}*`,
+          bookingDetail,
+          ``,
+          pdfUrl ? `Berikut terlampir dokumen konfirmasi pendaftaran Anda beserta Syarat & Ketentuan yang berlaku.` : ``,
+          ``,
+          `Untuk informasi lebih lanjut, silakan hubungi:`,
+          `📞 *+6283197321658*`,
+          `🌐 *www.rehlatours.id*`,
+          ``,
+          `Semoga Allah ﷻ memudahkan perjalanan ibadah Anda.`,
+          ``,
+          `جَزَاكَ ٱللَّٰهُ خَيْرًا`,
+          ``,
+          `*Tim Rehlatours Indonesia* 🤍`,
+        ].join('\n');
+
+        console.log('[WA-Customer] Sending greeting to:', customerPhone);
+        await sendWhatsAppMessage(customerPhone, greetingMsg);
+        console.log('[WA-Customer] Greeting sent successfully');
+
+        // Send PDF file if available
+        if (pdfUrl) {
+          await new Promise(resolve => setTimeout(resolve, 2000));
+          const pdfCaption = [
+            `📋 Dokumen Konfirmasi Pendaftaran`,
+            `${customer.fullName}`,
+            `${registrationDate}`,
+            booking ? `Booking: ${booking.bookingCode}` : '',
+            ``,
+            `*Rehlatours Indonesia*`,
+            `www.rehlatours.id`,
+          ].join('\n');
+          console.log('[WA-Customer] Sending PDF file...');
+          await sendWhatsAppFile(customerPhone, pdfUrl, pdfCaption, `Konfirmasi-${customer.fullName.replace(/\s+/g, '-')}.pdf`);
+          console.log('[WA-Customer] PDF sent successfully');
+        }
+      } catch (e: any) {
+        console.error('[WA-Customer] Failed:', e?.message || e);
       }
+    } else {
+      console.warn('[WA-Customer] No phone number available for customer');
     }
 
     // 3. Send Enhanced Admin Notification
@@ -255,8 +304,70 @@ export async function POST(request: Request) {
       const { sendAdminNotification } = await import('@/app/lib/whatsapp');
       const fmtDate = (d: Date | null) => d ? d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
 
-      const adminMsg = `🔔 *PENDAFTARAN BARU!*\n━━━━━━━━━━━━━━━━━\n\n👤 *DATA JAMAAH*\n▸ Nama: *${customer.fullName}*\n▸ NIK: ${customer.nik || '-'}\n▸ TTL: ${customer.birthPlace || '-'}, ${fmtDate(customer.birthDate)}\n▸ Kelamin: ${customer.gender === 'MALE' ? 'Laki-laki' : customer.gender === 'FEMALE' ? 'Perempuan' : '-'}\n▸ Ayah: ${customer.fatherName || '-'}\n▸ Ibu: ${customer.motherName || '-'}\n▸ Status: ${customer.maritalStatus || '-'}\n▸ Pekerjaan: ${customer.occupation || '-'}\n\n📱 *KONTAK*\n▸ Telepon: ${customer.phone}\n▸ WhatsApp: ${customer.whatsapp || '-'}\n▸ Email: ${customer.email || '-'}\n▸ Alamat: ${customer.address || '-'}\n▸ Kota: ${customer.city || '-'}, ${customer.province || '-'} ${customer.postalCode || ''}\n\n🆘 *KONTAK DARURAT*\n▸ ${customer.emergencyName || '-'} (${customer.emergencyRelation || '-'})\n▸ HP: ${customer.emergencyPhone || '-'}\n\n🛂 *PASPOR*\n▸ No: ${customer.passportNumber || 'Belum diisi'}\n▸ Berlaku: ${fmtDate(customer.passportExpiry)}\n▸ Tempat: ${customer.passportPlace || '-'}\n\n🏥 *KESEHATAN*\n▸ Penyakit: ${customer.hasDiseases ? (customer.diseaseNotes || 'Ya') : 'Tidak'}\n▸ Kebutuhan Khusus: ${customer.specialNeeds ? 'Ya' : 'Tidak'}\n▸ Kursi Roda: ${customer.wheelchair ? 'Ya' : 'Tidak'}\n▸ Umrah: ${customer.previousUmrah ? 'Pernah' : 'Belum'}\n▸ Haji: ${customer.previousHajj ? 'Pernah' : 'Belum'}${booking ? `\n\n✈️ *BOOKING UMRAH*\n▸ Kode: *${booking.bookingCode}*\n▸ Paket: *${pkgInfo?.name || '-'}* (${pkgInfo?.type || '-'})\n▸ Kamar: ${booking.roomType}\n▸ Total: *Rp ${booking.priceTotal.toLocaleString('id-ID')}*\n▸ Status: PENDING` : '\n\n📋 *Tanpa Booking Paket*\nJamaah mendaftar data diri saja (waiting list)'}\n\n━━━━━━━━━━━━━━━━━\n📅 Terdaftar: ${registrationDate}\n🔗 Cek di Dashboard CRM`;
-      await sendAdminNotification(adminMsg);
+      const adminLines = [
+        `🔔 *PENDAFTARAN BARU!*`,
+        `━━━━━━━━━━━━━━━━━`,
+        ``,
+        `👤 *DATA JAMAAH*`,
+        `▸ Nama: *${customer.fullName}*`,
+        `▸ NIK: ${customer.nik || '-'}`,
+        `▸ TTL: ${customer.birthPlace || '-'}, ${fmtDate(customer.birthDate)}`,
+        `▸ Kelamin: ${customer.gender === 'MALE' ? 'Laki-laki' : customer.gender === 'FEMALE' ? 'Perempuan' : '-'}`,
+        `▸ Ayah: ${customer.fatherName || '-'}`,
+        `▸ Ibu: ${customer.motherName || '-'}`,
+        `▸ Status: ${customer.maritalStatus || '-'}`,
+        `▸ Pekerjaan: ${customer.occupation || '-'}`,
+        ``,
+        `📱 *KONTAK*`,
+        `▸ Telepon: ${customer.phone}`,
+        `▸ WhatsApp: ${customer.whatsapp || '-'}`,
+        `▸ Email: ${customer.email || '-'}`,
+        `▸ Alamat: ${customer.address || '-'}`,
+        `▸ Kota: ${customer.city || '-'}, ${customer.province || '-'} ${customer.postalCode || ''}`,
+        ``,
+        `🆘 *KONTAK DARURAT*`,
+        `▸ ${customer.emergencyName || '-'} (${customer.emergencyRelation || '-'})`,
+        `▸ HP: ${customer.emergencyPhone || '-'}`,
+        ``,
+        `🛂 *PASPOR*`,
+        `▸ No: ${customer.passportNumber || 'Belum diisi'}`,
+        `▸ Berlaku: ${fmtDate(customer.passportExpiry)}`,
+        `▸ Tempat: ${customer.passportPlace || '-'}`,
+        ``,
+        `🏥 *KESEHATAN*`,
+        `▸ Penyakit: ${customer.hasDiseases ? (customer.diseaseNotes || 'Ya') : 'Tidak'}`,
+        `▸ Kebutuhan Khusus: ${customer.specialNeeds ? 'Ya' : 'Tidak'}`,
+        `▸ Kursi Roda: ${customer.wheelchair ? 'Ya' : 'Tidak'}`,
+        `▸ Umrah: ${customer.previousUmrah ? 'Pernah' : 'Belum'}`,
+        `▸ Haji: ${customer.previousHajj ? 'Pernah' : 'Belum'}`,
+      ];
+
+      if (booking) {
+        adminLines.push(
+          ``,
+          `✈️ *BOOKING UMRAH*`,
+          `▸ Kode: *${booking.bookingCode}*`,
+          `▸ Paket: *${pkgInfo?.name || '-'}* (${pkgInfo?.type || '-'})`,
+          `▸ Kamar: ${booking.roomType}`,
+          `▸ Total: *Rp ${booking.priceTotal.toLocaleString('id-ID')}*`,
+          `▸ Status: PENDING`,
+        );
+      } else {
+        adminLines.push(
+          ``,
+          `📋 *Tanpa Booking Paket*`,
+          `Jamaah mendaftar data diri saja (waiting list)`,
+        );
+      }
+
+      adminLines.push(
+        ``,
+        `━━━━━━━━━━━━━━━━━`,
+        `📅 Terdaftar: ${registrationDate}`,
+        `🔗 Cek di Dashboard CRM`,
+      );
+
+      await sendAdminNotification(adminLines.join('\n'));
     } catch (e) {
       console.error('Failed to send admin notification:', e);
     }
