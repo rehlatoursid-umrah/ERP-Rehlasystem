@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { Users, Plus, Search, Trash2, Edit, Eye, Phone, Mail, MapPin, FileText, X, ChevronRight, Shield, Loader2, ImageIcon } from 'lucide-react';
+import { Users, Plus, Search, Trash2, Edit, Eye, Phone, Mail, MapPin, FileText, X, ChevronRight, Shield, Loader2, ImageIcon, Send } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
-import { getCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerStats } from '@/app/actions/customers';
+import { getCustomers, createCustomer, updateCustomer, deleteCustomer, getCustomerStats, resendCustomerConfirmation } from '@/app/actions/customers';
 import { Input, Textarea, Select } from '@/app/components/ui/Input';
 import { Button } from '@/app/components/ui/Button';
 import { Card, CardContent } from '@/app/components/ui/Card';
@@ -22,6 +22,7 @@ export default function CustomersPage() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
+  const [resendingId, setResendingId] = useState<string | null>(null);
 
   // Form state
   const [form, setForm] = useState({
@@ -115,6 +116,24 @@ export default function CustomersPage() {
         }
       } catch (e) { toast.error("Gagal menghapus data"); }
     });
+  };
+
+  const handleResendWA = async (id: string) => {
+    if (!confirm('Kirim ulang WhatsApp Konfirmasi + PDF ke jamaah ini?')) return;
+    setResendingId(id);
+    const loadingToast = toast.loading('Memproses dokumen dan mengirim WA...');
+    try {
+      const res = await resendCustomerConfirmation(id);
+      if (res.success) {
+        toast.success('Pesan WA Konfirmasi berhasil dikirim!', { id: loadingToast });
+      } else {
+        toast.error(res.error || 'Gagal mengirim WA', { id: loadingToast });
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan sistem', { id: loadingToast });
+    } finally {
+      setResendingId(null);
+    }
   };
 
   const formatDate = (d: Date | string | null) => d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-';
@@ -325,9 +344,21 @@ export default function CustomersPage() {
                   </div>
                 )}
 
-                <div className="pt-4 flex gap-2">
-                  <Button variant="outline" size="sm" icon={<Edit size={14}/>} onClick={() => handleEdit(selectedCustomer)} className="flex-1">Edit</Button>
-                  <Button variant="danger" size="sm" icon={<Trash2 size={14}/>} onClick={() => handleDelete(selectedCustomer.id, selectedCustomer.fullName)} className="flex-1">Hapus</Button>
+                <div className="pt-4 flex flex-col gap-2">
+                  <div className="flex gap-2">
+                    <Button variant="outline" size="sm" icon={<Edit size={14}/>} onClick={() => handleEdit(selectedCustomer)} className="flex-1">Edit</Button>
+                    <Button variant="danger" size="sm" icon={<Trash2 size={14}/>} onClick={() => handleDelete(selectedCustomer.id, selectedCustomer.fullName)} className="flex-1">Hapus</Button>
+                  </div>
+                  <Button 
+                    variant="primary" 
+                    size="sm" 
+                    icon={resendingId === selectedCustomer.id ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />} 
+                    onClick={() => handleResendWA(selectedCustomer.id)} 
+                    disabled={resendingId === selectedCustomer.id}
+                    className="w-full mt-1"
+                  >
+                    {resendingId === selectedCustomer.id ? 'Mengirim...' : 'Kirim Ulang WA Konfirmasi'}
+                  </Button>
                 </div>
               </div>
             </div>

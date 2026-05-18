@@ -218,3 +218,138 @@ export async function getCustomerStats() {
   
   return { total, withPassport, withVaccine };
 }
+
+// --- RESEND WA CONFIRMATION ---
+export async function resendCustomerConfirmation(customerId: string) {
+  try {
+    const customer = await db.customer.findUnique({
+      where: { id: customerId },
+      include: { bookings: true }
+    });
+
+    if (!customer) return { success: false, error: 'Customer not found' };
+
+    const customerPhone = customer.whatsapp || customer.phone;
+    if (!customerPhone) return { success: false, error: 'Customer does not have a phone number' };
+
+    const booking = customer.bookings && customer.bookings.length > 0 ? customer.bookings[0] : null;
+    let pkgInfo: any = null;
+    if (booking && booking.packageId) {
+      pkgInfo = await db.package.findUnique({ where: { id: booking.packageId } });
+    }
+
+    const registrationDate = customer.createdAt.toLocaleDateString('id-ID', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+    // Generate PDF
+    let pdfUrl: string | null = null;
+    try {
+      const React = (await import('react')).default;
+      const { renderToBuffer } = await import('@react-pdf/renderer');
+      const { RegistrationConfirmationPdf } = await import('@/app/lib/pdf-registration');
+
+      const pdfData = {
+        fullName: customer.fullName,
+        nik: customer.nik || undefined,
+        birthPlace: customer.birthPlace || undefined,
+        birthDate: customer.birthDate?.toISOString() || undefined,
+        fatherName: customer.fatherName || undefined,
+        motherName: customer.motherName || undefined,
+        gender: customer.gender || undefined,
+        maritalStatus: customer.maritalStatus || undefined,
+        occupation: customer.occupation || undefined,
+        phone: customer.phone,
+        whatsapp: customer.whatsapp || undefined,
+        email: customer.email || undefined,
+        address: customer.address || undefined,
+        city: customer.city || undefined,
+        province: customer.province || undefined,
+        postalCode: customer.postalCode || undefined,
+        emergencyName: customer.emergencyName || undefined,
+        emergencyRelation: customer.emergencyRelation || undefined,
+        emergencyPhone: customer.emergencyPhone || undefined,
+        passportNumber: customer.passportNumber || undefined,
+        passportIssued: customer.passportIssued?.toISOString() || undefined,
+        passportExpiry: customer.passportExpiry?.toISOString() || undefined,
+        passportPlace: customer.passportPlace || undefined,
+        hasDiseases: customer.hasDiseases || false,
+        diseaseNotes: customer.diseaseNotes || undefined,
+        specialNeeds: customer.specialNeeds || false,
+        wheelchair: customer.wheelchair || false,
+        previousUmrah: customer.previousUmrah || false,
+        previousHajj: customer.previousHajj || false,
+        bookingCode: booking?.bookingCode || undefined,
+        packageName: pkgInfo?.name || undefined,
+        packageType: pkgInfo?.type || undefined,
+        roomType: booking?.roomType || undefined,
+        priceTotal: booking?.priceTotal || undefined,
+        currency: booking?.currency || undefined,
+        registrationDate,
+        customerId: customer.id,
+      };
+
+      const pdfElement = React.createElement(RegistrationConfirmationPdf, { data: pdfData as any });
+      const pdfBuffer = await renderToBuffer(pdfElement as any);
+
+      const { uploadFileToR2 } = await import('@/app/lib/s3');
+      const fileName = `Konfirmasi-Pendaftaran-${customer.fullName.replace(/\s+/g, '-')}-${Date.now()}.pdf`;
+      pdfUrl = await uploadFileToR2(Buffer.from(pdfBuffer), fileName, 'application/pdf', 'confirmations');
+    } catch (e: any) {
+      console.error('[PDF] Failed to generate PDF during resend:', e?.message || e);
+    }
+
+    // Send WhatsApp
+    const { sendWhatsAppFile, sendWhatsAppMessage } = await import('@/app/lib/whatsapp');
+    
+    const bookingDetail = booking
+      ? `\n\n📝 *Detail Booking:*\n▸ Kode Booking: *${booking.bookingCode}*\n▸ Paket: *${pkgInfo?.name || '-'}* (${pkgInfo?.type || '-'})\n▸ Tipe Kamar: *${booking.roomType}*\n▸ Total: *Rp ${booking.priceTotal.toLocaleString('id-ID')}*`
+      : '';
+
+    const greetingMsg = [
+      `بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ`,
+      ``,
+      `Assalamu'alaikum Warahmatullahi Wabarakatuh,`,
+      ``,
+      `*${customer.fullName}* yang dirahmati Allah ﷻ`,
+      ``,
+      `Terima kasih telah mendaftarkan diri di *Rehlatours Indonesia* 🕋`,
+      ``,
+      `Pendaftaran Anda telah kami terima dan tercatat dalam sistem kami pada:`,
+      `📅 *${registrationDate}*`,
+      `🆔 *Reg. ID: ${customer.id.slice(0, 8).toUpperCase()}*`,
+      bookingDetail,
+      ``,
+      pdfUrl ? `Berikut terlampir dokumen konfirmasi pendaftaran Anda beserta Syarat & Ketentuan yang berlaku.` : ``,
+      ``,
+      `Untuk informasi lebih lanjut, silakan hubungi:`,
+      `📞 *+6283197321658*`,
+      `🌐 *www.rehlatours.id*`,
+      ``,
+      `Semoga Allah ﷻ memudahkan perjalanan ibadah Anda.`,
+      ``,
+      `جَزَاكَ ٱللَّٰهُ خَيْرًا`,
+      ``,
+      `*Tim Rehlatours Indonesia* 🤍`,
+    ].join('\n');
+
+    await sendWhatsAppMessage(customerPhone, greetingMsg);
+
+    if (pdfUrl) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      const pdfCaption = [
+        `📋 Dokumen Konfirmasi Pendaftaran`,
+        `${customer.fullName}`,
+        `${registrationDate}`,
+        booking ? `Booking: ${booking.bookingCode}` : '',
+        ``,
+        `*Rehlatours Indonesia*`,
+        `www.rehlatours.id`,
+      ].join('\n');
+      await sendWhatsAppFile(customerPhone, pdfUrl, pdfCaption, `Konfirmasi-${customer.fullName.replace(/\s+/g, '-')}.pdf`);
+    }
+
+    return { success: true };
+  } catch (error: any) {
+    console.error("Resend WA Error:", error);
+    return { success: false, error: "Terjadi kesalahan internal saat mengirim ulang WA." };
+  }
+}
