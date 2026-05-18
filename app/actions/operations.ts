@@ -63,6 +63,9 @@ export async function createPackage(data: {
   priceOriginal?: number; currency?: string; durationDays?: number; durationNights?: number;
   includes?: string; excludes?: string; hotelMakkah?: string; hotelMadinah?: string;
   airline?: string; coverImage?: string;
+  meals?: string; transportation?: string; guidance?: string; documentation?: string;
+  hotelMakkahDesc?: string; hotelMadinahDesc?: string; flightDesc?: string; busDesc?: string;
+  reviews?: string;
   badge?: string; highlights?: string; rating?: number; reviewCount?: number;
   isPopular?: boolean; isBestSeller?: boolean; groupSizeMin?: number; groupSizeMax?: number;
   itinerary?: string;
@@ -81,6 +84,11 @@ export async function createPackage(data: {
       includes: data.includes || null, excludes: data.excludes || null,
       hotelMakkah: data.hotelMakkah || null, hotelMadinah: data.hotelMadinah || null,
       airline: data.airline || null, coverImage: data.coverImage || null,
+      meals: data.meals || null, transportation: data.transportation || null,
+      guidance: data.guidance || null, documentation: data.documentation || null,
+      hotelMakkahDesc: data.hotelMakkahDesc || null, hotelMadinahDesc: data.hotelMadinahDesc || null,
+      flightDesc: data.flightDesc || null, busDesc: data.busDesc || null,
+      reviews: data.reviews || null,
       badge: data.badge || null, highlights: data.highlights || null,
       rating: data.rating || 0, reviewCount: data.reviewCount || 0,
       isPopular: data.isPopular || false, isBestSeller: data.isBestSeller || false,

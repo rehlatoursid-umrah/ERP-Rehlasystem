@@ -38,6 +38,9 @@ export default function PackagesPage() {
     badge: '', highlights: '', rating: 0, reviewCount: 0,
     isPopular: false, isBestSeller: false, groupSizeMin: 15, groupSizeMax: 45,
     itinerary: '[\n  {\n    "day": 1,\n    "title": "Jakarta - Jeddah - Madinah",\n    "highlight": "Perjalanan",\n    "activities": [\n      "Kumpul di bandara",\n      "Penerbangan ke Jeddah",\n      "Perjalanan ke Madinah",\n      "Check-in Hotel"\n    ]\n  }\n]',
+    meals: '', transportation: '', guidance: '', documentation: '',
+    hotelMakkahDesc: '', hotelMadinahDesc: '', flightDesc: '', busDesc: '',
+    reviews: '[]'
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -63,6 +66,11 @@ export default function PackagesPage() {
       isPopular: (p as any).isPopular || false, isBestSeller: (p as any).isBestSeller || false,
       groupSizeMin: (p as any).groupSizeMin || 15, groupSizeMax: (p as any).groupSizeMax || 45,
       itinerary: (p as any).itinerary || '[]',
+      meals: (p as any).meals || '', transportation: (p as any).transportation || '',
+      guidance: (p as any).guidance || '', documentation: (p as any).documentation || '',
+      hotelMakkahDesc: (p as any).hotelMakkahDesc || '', hotelMadinahDesc: (p as any).hotelMadinahDesc || '',
+      flightDesc: (p as any).flightDesc || '', busDesc: (p as any).busDesc || '',
+      reviews: (p as any).reviews || '[]',
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -215,6 +223,20 @@ export default function PackagesPage() {
               <div className="grid grid-cols-2 gap-4">
                 <Textarea label="Include" value={form.includes} onChange={e => setForm({...form, includes: e.target.value})} rows={3} />
                 <Textarea label="Exclude" value={form.excludes} onChange={e => setForm({...form, excludes: e.target.value})} rows={3} />
+              </div>
+
+              <p className="text-xs font-bold text-[#a77a0b] uppercase mt-4">Detail Tambahan (Single Page)</p>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Input label="Makanan (Meals)" value={form.meals} onChange={e => setForm({...form, meals: e.target.value})} placeholder="Makan 3x sehari" />
+                <Input label="Transportasi" value={form.transportation} onChange={e => setForm({...form, transportation: e.target.value})} placeholder="Transfer bandara" />
+                <Input label="Bimbingan" value={form.guidance} onChange={e => setForm({...form, guidance: e.target.value})} placeholder="Mutawwif" />
+                <Input label="Dokumentasi" value={form.documentation} onChange={e => setForm({...form, documentation: e.target.value})} placeholder="Visa & Asuransi" />
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                <Input label="Desc Hotel Makkah" value={form.hotelMakkahDesc} onChange={e => setForm({...form, hotelMakkahDesc: e.target.value})} placeholder="Hotel bintang 5..." />
+                <Input label="Desc Hotel Madinah" value={form.hotelMadinahDesc} onChange={e => setForm({...form, hotelMadinahDesc: e.target.value})} placeholder="Hotel bintang 5..." />
+                <Input label="Desc Pesawat" value={form.flightDesc} onChange={e => setForm({...form, flightDesc: e.target.value})} placeholder="Economy Class..." />
+                <Input label="Desc Bus" value={form.busDesc} onChange={e => setForm({...form, busDesc: e.target.value})} placeholder="Bus VIP AC..." />
               </div>
 
               <p className="text-xs font-bold text-[#a77a0b] uppercase mt-4">Website Display (Tampilan di Website Publik)</p>

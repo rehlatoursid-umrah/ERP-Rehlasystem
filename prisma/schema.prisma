@@ -150,6 +150,18 @@ model Package {
   isBestSeller    Boolean   @default(false)
   groupSizeMin    Int?      @default(15)
   groupSizeMax    Int?      @default(45)
+  // Additional Detail Text Fields (For Single Page)
+  meals           String?   // Deskripsi makanan
+  transportation  String?   // Deskripsi transportasi umum
+  guidance        String?   // Deskripsi bimbingan/mutawwif
+  documentation   String?   // Deskripsi dokumentasi/visa
+  // Accommodation Tab Details
+  hotelMakkahDesc   String?
+  hotelMadinahDesc  String?
+  flightDesc        String?
+  busDesc           String?
+  // Reviews Tab (JSON string)
+  reviews           String?
   // Meta
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
