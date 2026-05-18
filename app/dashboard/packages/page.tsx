@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { Package, Plus, Edit, Trash2, X, Loader2, Star, Calendar, Users, Plane, Building2, ChevronRight } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, X, Loader2, Star, Calendar, Users, Plane, Building2, ChevronRight, ImageIcon } from 'lucide-react';
+import { Toaster, toast } from 'sonner';
 import { getPackages, createPackage, updatePackage, deletePackage } from '@/app/actions/operations';
 import { uploadAction } from '@/app/actions/storage';
 import { Input, Textarea, Select } from '@/app/components/ui/Input';
