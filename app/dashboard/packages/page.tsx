@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useTransition } from 'react';
 import { Package, Plus, Edit, Trash2, X, Loader2, Star, Calendar, Users, Plane, Building2, ChevronRight } from 'lucide-react';
-import { Toaster, toast } from 'sonner';
 import { getPackages, createPackage, updatePackage, deletePackage } from '@/app/actions/operations';
+import { uploadAction } from '@/app/actions/storage';
 import { Input, Textarea, Select } from '@/app/components/ui/Input';
 import { Button } from '@/app/components/ui/Button';
 import { PageHeader } from '@/app/components/layout/PageHeader';
@@ -19,7 +19,7 @@ const STATUS_MAP: Record<string, { label: string; variant: 'success' | 'warning'
   ARCHIVED: { label: 'Archived', variant: 'danger' },
 };
 
-const TYPE_MAP: Record<string, string> = { REGULAR: 'Regular', VIP: 'VIP', VVIP: 'VVIP', CUSTOM: 'Custom' };
+const TYPE_MAP: Record<string, string> = { ECONOMY: 'Ekonomi', REGULAR: 'Reguler', PREMIUM: 'Premium', VIP: 'VIP', VVIP: 'VVIP', CUSTOM: 'Custom' };
 
 export default function PackagesPage() {
   const [packages, setPackages] = useState<Pkg[]>([]);
@@ -27,6 +27,7 @@ export default function PackagesPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
 
   const emptyForm = {
     name: '', type: 'REGULAR', description: '', status: 'DRAFT',
@@ -73,6 +74,31 @@ export default function PackagesPage() {
         setForm(emptyForm); setEditingId(null); setShowForm(false); loadData();
       } catch { toast.error("Gagal menyimpan"); }
     });
+  };
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploading(true);
+    const toastId = toast.loading('Mengunggah gambar...');
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('folder', 'packages');
+
+      const res = await uploadAction(formData);
+      if (res.success && res.url) {
+        setForm({ ...form, coverImage: res.url });
+        toast.success('Gambar berhasil diunggah', { id: toastId });
+      } else {
+        toast.error(res.error || 'Gagal mengunggah', { id: toastId });
+      }
+    } catch (err) {
+      toast.error('Terjadi kesalahan', { id: toastId });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -158,9 +184,9 @@ export default function PackagesPage() {
             </div>
             <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Input label="Nama Paket *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Paket Umrah VIP 2026" />
+                <Input label="Nama Paket *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Paket Umrah Reguler 2026" />
                 <div className="grid grid-cols-2 gap-3">
-                  <Select label="Tipe" value={form.type} onChange={e => setForm({...form, type: e.target.value})} options={[{value:'REGULAR',label:'Regular'},{value:'VIP',label:'VIP'},{value:'VVIP',label:'VVIP'},{value:'CUSTOM',label:'Custom'}]} />
+                  <Select label="Tipe" value={form.type} onChange={e => setForm({...form, type: e.target.value})} options={[{value:'ECONOMY',label:'Ekonomi'},{value:'REGULAR',label:'Reguler'},{value:'PREMIUM',label:'Premium'},{value:'VIP',label:'VIP'},{value:'VVIP',label:'VVIP'},{value:'CUSTOM',label:'Custom'}]} />
                   <Select label="Status" value={form.status} onChange={e => setForm({...form, status: e.target.value})} options={[{value:'DRAFT',label:'Draft'},{value:'ACTIVE',label:'Active'},{value:'CLOSED',label:'Closed'}]} />
                 </div>
               </div>
@@ -188,10 +214,34 @@ export default function PackagesPage() {
               </div>
 
               <p className="text-xs font-bold text-[#a77a0b] uppercase mt-4">Website Display (Tampilan di Website Publik)</p>
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                <Input label="Badge Label" value={form.badge} onChange={e => setForm({...form, badge: e.target.value})} placeholder="Best Seller, Hemat, Premium" />
-                <Input type="number" label="Rating (0-5)" value={form.rating||''} onChange={e => setForm({...form, rating: +e.target.value})} />
-                <Input type="number" label="Jumlah Review" value={form.reviewCount||''} onChange={e => setForm({...form, reviewCount: +e.target.value})} />
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50 space-y-4 mb-4">
+                <div>
+                  <label className="block text-xs font-semibold text-gray-700 mb-2">Gambar Paket (Cover Image)</label>
+                  <div className="flex gap-4 items-center">
+                    {form.coverImage ? (
+                      <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-gray-300">
+                        <img src={form.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                        <button onClick={() => setForm({...form, coverImage: ''})} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"><X size={12}/></button>
+                      </div>
+                    ) : (
+                      <div className="w-32 h-20 rounded-lg bg-gray-200 border-2 border-dashed border-gray-300 flex items-center justify-center">
+                        <ImageIcon className="text-gray-400" size={24} />
+                      </div>
+                    )}
+                    <div className="flex-1">
+                      <Input type="file" accept="image/*" onChange={handleImageUpload} disabled={isUploading} className="text-sm" />
+                      {isUploading && <p className="text-xs text-[#a77a0b] mt-1 flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Mengunggah...</p>}
+                      <p className="text-[10px] text-gray-500 mt-1">Atau masukkan URL gambar di bawah:</p>
+                      <Input value={form.coverImage} onChange={e => setForm({...form, coverImage: e.target.value})} placeholder="https://..." className="mt-1 text-sm" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                  <Input label="Badge Label" value={form.badge} onChange={e => setForm({...form, badge: e.target.value})} placeholder="Best Seller, Hemat, Premium" />
+                  <Input type="number" label="Rating (0-5)" value={form.rating||''} onChange={e => setForm({...form, rating: +e.target.value})} />
+                  <Input type="number" label="Jumlah Review" value={form.reviewCount||''} onChange={e => setForm({...form, reviewCount: +e.target.value})} />
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <Input type="number" label="Harga Asli (coret)" value={form.priceOriginal||''} onChange={e => setForm({...form, priceOriginal: +e.target.value})} placeholder="Harga sebelum diskon" />
