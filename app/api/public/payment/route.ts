@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 // Public API: Customer submits payment update (records a PENDING payment)
 export async function POST(request: Request) {
   try {
@@ -17,16 +28,16 @@ export async function POST(request: Request) {
     const proofFile = formData.get('proofFile') as Blob | null;
 
     if (!bookingId) {
-      return NextResponse.json({ success: false, error: 'Booking ID wajib diisi' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Booking ID wajib diisi' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
     if (!amount || amount <= 0) {
-      return NextResponse.json({ success: false, error: 'Jumlah pembayaran harus lebih dari 0' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Jumlah pembayaran harus lebih dari 0' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
     if (!method) {
-      return NextResponse.json({ success: false, error: 'Metode pembayaran wajib diisi' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Metode pembayaran wajib diisi' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
     if (!proofFile) {
-      return NextResponse.json({ success: false, error: 'Bukti transfer wajib diunggah' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Bukti transfer wajib diunggah' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
     // Verify booking exists
@@ -36,7 +47,7 @@ export async function POST(request: Request) {
     });
 
     if (!booking) {
-      return NextResponse.json({ success: false, error: 'Booking tidak ditemukan' }, { status: 404 });
+      return NextResponse.json({ success: false, error: 'Booking tidak ditemukan' }, { status: 404, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
     // Verify phone
@@ -45,7 +56,7 @@ export async function POST(request: Request) {
       const custPhone = (booking.customer.phone || '').replace(/\D/g, '');
       const custWa = (booking.customer.whatsapp || '').replace(/\D/g, '');
       if (!custPhone.includes(phone) && !custWa.includes(phone) && !phone.includes(custPhone) && !phone.includes(custWa)) {
-        return NextResponse.json({ success: false, error: 'Verifikasi gagal' }, { status: 403 });
+        return NextResponse.json({ success: false, error: 'Verifikasi gagal' }, { status: 403, headers: { 'Access-Control-Allow-Origin': '*' } });
       }
     }
 
@@ -60,7 +71,7 @@ export async function POST(request: Request) {
         proofUrl = await uploadFileToR2(buffer, fileName, proofFile.type || 'image/jpeg', 'payments');
       } catch (err) {
         console.error('File upload error:', err);
-        return NextResponse.json({ success: false, error: 'Gagal mengunggah file bukti' }, { status: 500 });
+        return NextResponse.json({ success: false, error: 'Gagal mengunggah file bukti' }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
       }
     }
 
@@ -93,9 +104,18 @@ export async function POST(request: Request) {
       success: true,
       message: 'Pembayaran berhasil dicatat! Menunggu verifikasi admin.',
       paymentId: payment.id,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
     });
   } catch (error) {
     console.error('Payment submission error:', error);
-    return NextResponse.json({ success: false, error: 'Terjadi kesalahan saat mencatat pembayaran' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Terjadi kesalahan saat mencatat pembayaran' }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }

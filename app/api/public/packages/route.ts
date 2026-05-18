@@ -3,6 +3,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 // Public API: Get active packages for customer booking form
 export async function GET() {
   try {
@@ -40,9 +51,18 @@ export async function GET() {
       orderBy: { createdAt: 'desc' },
     });
 
-    return NextResponse.json({ success: true, packages });
+    return NextResponse.json({ success: true, packages }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   } catch (error) {
     console.error('Public packages API error:', error);
-    return NextResponse.json({ success: false, error: 'Gagal memuat data paket' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Gagal memuat data paket' }, { 
+      status: 500,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   }
 }

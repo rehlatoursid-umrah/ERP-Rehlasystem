@@ -1,6 +1,17 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/app/lib/db';
 
+export async function OPTIONS() {
+  return new NextResponse(null, {
+    status: 200,
+    headers: {
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+      'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    },
+  });
+}
+
 // Public API: Customer self-registration + optional booking
 export async function POST(request: Request) {
   try {
@@ -9,10 +20,10 @@ export async function POST(request: Request) {
 
     // Validate required fields
     if (!body.fullName?.trim()) {
-      return NextResponse.json({ success: false, error: 'Nama lengkap wajib diisi' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Nama lengkap wajib diisi' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
     if (!body.phone?.trim()) {
-      return NextResponse.json({ success: false, error: 'Nomor HP wajib diisi' }, { status: 400 });
+      return NextResponse.json({ success: false, error: 'Nomor HP wajib diisi' }, { status: 400, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
     const ktpFile = formData.get('ktpFile') as Blob | null;
@@ -33,7 +44,7 @@ export async function POST(request: Request) {
       }
     } catch (err) {
       console.error('File upload error:', err);
-      return NextResponse.json({ success: false, error: 'Gagal mengunggah dokumen' }, { status: 500 });
+      return NextResponse.json({ success: false, error: 'Gagal mengunggah dokumen' }, { status: 500, headers: { 'Access-Control-Allow-Origin': '*' } });
     }
 
     // Create customer
@@ -381,9 +392,16 @@ export async function POST(request: Request) {
         priceTotal: booking.priceTotal,
         remainingAmount: booking.remainingAmount,
       } : null,
+    }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
     });
   } catch (error: any) {
     console.error('Public registration API error:', error);
-    return NextResponse.json({ success: false, error: 'Terjadi kesalahan saat mendaftar' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Terjadi kesalahan saat mendaftar' }, { 
+      status: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }
