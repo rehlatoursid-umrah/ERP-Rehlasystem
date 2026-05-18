@@ -37,6 +37,7 @@ export default function PackagesPage() {
     hotelMakkah: '', hotelMadinah: '', airline: '', coverImage: '',
     badge: '', highlights: '', rating: 0, reviewCount: 0,
     isPopular: false, isBestSeller: false, groupSizeMin: 15, groupSizeMax: 45,
+    itinerary: '[\n  {\n    "day": 1,\n    "title": "Jakarta - Jeddah - Madinah",\n    "highlight": "Perjalanan",\n    "activities": [\n      "Kumpul di bandara",\n      "Penerbangan ke Jeddah",\n      "Perjalanan ke Madinah",\n      "Check-in Hotel"\n    ]\n  }\n]',
   };
   const [form, setForm] = useState(emptyForm);
 
@@ -61,6 +62,7 @@ export default function PackagesPage() {
       rating: (p as any).rating || 0, reviewCount: (p as any).reviewCount || 0,
       isPopular: (p as any).isPopular || false, isBestSeller: (p as any).isBestSeller || false,
       groupSizeMin: (p as any).groupSizeMin || 15, groupSizeMax: (p as any).groupSizeMax || 45,
+      itinerary: (p as any).itinerary || '[]',
     });
     setEditingId(p.id);
     setShowForm(true);
@@ -253,6 +255,18 @@ export default function PackagesPage() {
                 </div>
               </div>
               <Textarea label="Highlights (satu per baris)" value={form.highlights} onChange={e => setForm({...form, highlights: e.target.value})} rows={4} placeholder={"Hotel dekat Masjidil Haram\nMakan 3x sehari\nBimbingan manasik lengkap"} />
+              
+              <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
+                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-2">Itinerary (Jadwal Perjalanan - Format JSON)</p>
+                <Textarea 
+                  value={form.itinerary} 
+                  onChange={e => setForm({...form, itinerary: e.target.value})} 
+                  rows={8} 
+                  className="font-mono text-xs"
+                  placeholder={'[\n  {\n    "day": 1,\n    "title": "Judul",\n    "highlight": "Highlight",\n    "activities": ["Aktivitas 1"]\n  }\n]'} 
+                />
+                <p className="text-[10px] text-gray-500 mt-2">Masukkan data Itinerary dalam format JSON Array. Data ini akan ditampilkan pada tab Itinerary di halaman detail website.</p>
+              </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" checked={form.isPopular} onChange={e => setForm({...form, isPopular: e.target.checked})} className="accent-[#3a0519]" />

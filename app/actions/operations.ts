@@ -65,6 +65,7 @@ export async function createPackage(data: {
   airline?: string; coverImage?: string;
   badge?: string; highlights?: string; rating?: number; reviewCount?: number;
   isPopular?: boolean; isBestSeller?: boolean; groupSizeMin?: number; groupSizeMax?: number;
+  itinerary?: string;
 }) {
   const slug = data.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString(36);
   return db.package.create({
@@ -84,6 +85,7 @@ export async function createPackage(data: {
       rating: data.rating || 0, reviewCount: data.reviewCount || 0,
       isPopular: data.isPopular || false, isBestSeller: data.isBestSeller || false,
       groupSizeMin: data.groupSizeMin || 15, groupSizeMax: data.groupSizeMax || 45,
+      itinerary: data.itinerary || null,
     }
   });
 }
