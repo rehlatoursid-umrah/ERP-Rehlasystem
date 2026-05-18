@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useTransition } from 'react';
-import { Package, Plus, Edit, Trash2, X, Loader2, Star, Calendar, Users, Plane, Building2, ChevronRight, ImageIcon } from 'lucide-react';
+import { Package, Plus, Edit, Trash2, X, Loader2, Star, Calendar, Users, Plane, Building2, ChevronRight, ImageIcon, PlusCircle, Trash } from 'lucide-react';
 import { Toaster, toast } from 'sonner';
 import { getPackages, createPackage, updatePackage, deletePackage } from '@/app/actions/operations';
 import { uploadAction } from '@/app/actions/storage';
@@ -30,6 +30,14 @@ export default function PackagesPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
 
+  interface ItineraryDayInput {
+    day: number;
+    title: string;
+    highlight: string;
+    activities: string;
+  }
+  const [itineraryDays, setItineraryDays] = useState<ItineraryDayInput[]>([]);
+
   const emptyForm = {
     name: '', type: 'REGULAR', description: '', status: 'DRAFT',
     priceQuad: 0, priceTriple: 0, priceDouble: 0, priceSingle: 0, priceOriginal: 0, currency: 'IDR',
@@ -37,7 +45,6 @@ export default function PackagesPage() {
     hotelMakkah: '', hotelMadinah: '', airline: '', coverImage: '',
     badge: '', highlights: '', rating: 0, reviewCount: 0,
     isPopular: false, isBestSeller: false, groupSizeMin: 15, groupSizeMax: 45,
-    itinerary: '[\n  {\n    "day": 1,\n    "title": "Jakarta - Jeddah - Madinah",\n    "highlight": "Perjalanan",\n    "activities": [\n      "Kumpul di bandara",\n      "Penerbangan ke Jeddah",\n      "Perjalanan ke Madinah",\n      "Check-in Hotel"\n    ]\n  }\n]',
     meals: '', transportation: '', guidance: '', documentation: '',
     hotelMakkahDesc: '', hotelMadinahDesc: '', flightDesc: '', busDesc: '',
     reviews: '[]'
@@ -65,14 +72,38 @@ export default function PackagesPage() {
       rating: (p as any).rating || 0, reviewCount: (p as any).reviewCount || 0,
       isPopular: (p as any).isPopular || false, isBestSeller: (p as any).isBestSeller || false,
       groupSizeMin: (p as any).groupSizeMin || 15, groupSizeMax: (p as any).groupSizeMax || 45,
-      itinerary: (p as any).itinerary || '[]',
       meals: (p as any).meals || '', transportation: (p as any).transportation || '',
       guidance: (p as any).guidance || '', documentation: (p as any).documentation || '',
       hotelMakkahDesc: (p as any).hotelMakkahDesc || '', hotelMadinahDesc: (p as any).hotelMadinahDesc || '',
       flightDesc: (p as any).flightDesc || '', busDesc: (p as any).busDesc || '',
       reviews: (p as any).reviews || '[]',
     });
+
+    let parsedItinerary: ItineraryDayInput[] = [];
+    if ((p as any).itinerary) {
+      try {
+        const arr = JSON.parse((p as any).itinerary);
+        parsedItinerary = arr.map((a: any) => ({
+          day: a.day || 1,
+          title: a.title || '',
+          highlight: a.highlight || '',
+          activities: (a.activities || []).join('\n')
+        }));
+      } catch (e) {}
+    }
+    if (parsedItinerary.length === 0) {
+      parsedItinerary = [{ day: 1, title: '', highlight: '', activities: '' }];
+    }
+    setItineraryDays(parsedItinerary);
+
     setEditingId(p.id);
+    setShowForm(true);
+  };
+
+  const handleCreate = () => {
+    setForm(emptyForm);
+    setEditingId(null);
+    setItineraryDays([{ day: 1, title: '', highlight: '', activities: '' }]);
     setShowForm(true);
   };
 
@@ -80,8 +111,17 @@ export default function PackagesPage() {
     if (!form.name.trim()) { toast.error("Nama paket wajib diisi"); return; }
     startTransition(async () => {
       try {
-        if (editingId) { await updatePackage(editingId, form); toast.success("Paket diupdate!"); }
-        else { await createPackage(form); toast.success("Paket baru ditambahkan!"); }
+        const submissionData = {
+          ...form,
+          itinerary: JSON.stringify(itineraryDays.filter(d => d.title.trim()).map(d => ({
+            day: d.day,
+            title: d.title,
+            highlight: d.highlight,
+            activities: d.activities.split('\n').filter(s => s.trim() !== '')
+          })))
+        };
+        if (editingId) { await updatePackage(editingId, submissionData); toast.success("Paket diupdate!"); }
+        else { await createPackage(submissionData); toast.success("Paket baru ditambahkan!"); }
         setForm(emptyForm); setEditingId(null); setShowForm(false); loadData();
       } catch { toast.error("Gagal menyimpan"); }
     });
@@ -279,15 +319,78 @@ export default function PackagesPage() {
               <Textarea label="Highlights (satu per baris)" value={form.highlights} onChange={e => setForm({...form, highlights: e.target.value})} rows={4} placeholder={"Hotel dekat Masjidil Haram\nMakan 3x sehari\nBimbingan manasik lengkap"} />
               
               <div className="border border-gray-200 rounded-xl p-4 bg-gray-50">
-                <p className="text-xs font-bold text-[#a77a0b] uppercase mb-2">Itinerary (Jadwal Perjalanan - Format JSON)</p>
-                <Textarea 
-                  value={form.itinerary} 
-                  onChange={e => setForm({...form, itinerary: e.target.value})} 
-                  rows={8} 
-                  className="font-mono text-xs"
-                  placeholder={'[\n  {\n    "day": 1,\n    "title": "Judul",\n    "highlight": "Highlight",\n    "activities": ["Aktivitas 1"]\n  }\n]'} 
-                />
-                <p className="text-[10px] text-gray-500 mt-2">Masukkan data Itinerary dalam format JSON Array. Data ini akan ditampilkan pada tab Itinerary di halaman detail website.</p>
+                <div className="flex justify-between items-center mb-4">
+                  <p className="text-xs font-bold text-[#a77a0b] uppercase">Itinerary (Jadwal Perjalanan)</p>
+                  <Button variant="outline" size="sm" onClick={(e) => { e.preventDefault(); setItineraryDays([...itineraryDays, { day: itineraryDays.length + 1, title: '', highlight: '', activities: '' }]); }}>
+                    <PlusCircle size={14} className="mr-1" /> Tambah Hari
+                  </Button>
+                </div>
+                
+                <div className="space-y-4">
+                  {itineraryDays.map((itinerary, index) => (
+                    <div key={index} className="bg-white border border-gray-200 p-4 rounded-lg relative shadow-sm">
+                      <button 
+                        onClick={(e) => { e.preventDefault(); setItineraryDays(itineraryDays.filter((_, i) => i !== index)); }}
+                        className="absolute top-3 right-3 text-red-500 hover:bg-red-50 p-1 rounded transition-colors"
+                        title="Hapus Hari"
+                      >
+                        <Trash size={16} />
+                      </button>
+                      <div className="flex items-center gap-3 mb-3 pr-8">
+                        <div className="w-20">
+                          <Input 
+                            type="number" 
+                            label="Hari Ke" 
+                            value={itinerary.day} 
+                            onChange={e => {
+                              const newArr = [...itineraryDays];
+                              newArr[index].day = +e.target.value;
+                              setItineraryDays(newArr);
+                            }} 
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input 
+                            label="Judul Hari" 
+                            placeholder="Contoh: Jakarta - Jeddah" 
+                            value={itinerary.title} 
+                            onChange={e => {
+                              const newArr = [...itineraryDays];
+                              newArr[index].title = e.target.value;
+                              setItineraryDays(newArr);
+                            }} 
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <Input 
+                            label="Highlight" 
+                            placeholder="Contoh: Perjalanan Udara" 
+                            value={itinerary.highlight} 
+                            onChange={e => {
+                              const newArr = [...itineraryDays];
+                              newArr[index].highlight = e.target.value;
+                              setItineraryDays(newArr);
+                            }} 
+                          />
+                        </div>
+                      </div>
+                      <Textarea 
+                        label="Daftar Aktivitas (Pisahkan dengan Enter / Baris Baru)" 
+                        rows={3}
+                        placeholder={"Kumpul di bandara Soekarno Hatta\nPenerbangan menuju Jeddah"}
+                        value={itinerary.activities} 
+                        onChange={e => {
+                          const newArr = [...itineraryDays];
+                          newArr[index].activities = e.target.value;
+                          setItineraryDays(newArr);
+                        }} 
+                      />
+                    </div>
+                  ))}
+                  {itineraryDays.length === 0 && (
+                    <p className="text-center text-gray-400 text-sm py-4">Belum ada hari itinerary. Silakan tambah hari.</p>
+                  )}
+                </div>
               </div>
               <div className="flex gap-4">
                 <label className="flex items-center gap-2 cursor-pointer">
