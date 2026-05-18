@@ -3,9 +3,11 @@ export async function sendWhatsAppMessage(targetPhone: string, message: string) 
     const BASE_URL = (process.env.WA_API_URL || 'https://gowa-veqeqo5hgucr.cgk-robin.sumopod.my.id').replace(/\/$/, '');
     const WA_AUTH = process.env.WA_API_AUTH;
 
-    // Format phone: remove non-digits, ensure 62 prefix
+    // Format phone: remove non-digits
     let phone = targetPhone.replace(/\D/g, '');
+    // Normalize Indonesian numbers: replace leading 0 with 62, remove 0 after 62
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+    if (phone.startsWith('620')) phone = '62' + phone.slice(3);
 
     const payload = new FormData();
     payload.append('phone', phone);
@@ -45,6 +47,7 @@ export async function sendWhatsAppFile(targetPhone: string, fileUrl: string, cap
 
     let phone = targetPhone.replace(/\D/g, '');
     if (phone.startsWith('0')) phone = '62' + phone.slice(1);
+    if (phone.startsWith('620')) phone = '62' + phone.slice(3);
 
     // Download the file from R2 URL first
     console.log('[WA-File] Downloading file from:', fileUrl);
