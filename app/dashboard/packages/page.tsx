@@ -111,6 +111,7 @@ export default function PackagesPage() {
   };
 
   const fmt = (n: number) => n.toLocaleString('id-ID');
+  const getImageUrl = (url: string) => url?.startsWith('/') ? `https://www.rehlatours.id${url}` : url;
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -135,7 +136,7 @@ export default function PackagesPage() {
               <div key={p.id} className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden hover:shadow-md transition-shadow group">
                 {/* Cover */}
                 <div className="h-32 bg-gradient-to-br from-[#3a0519] to-[#5a0826] relative flex items-end p-4">
-                  {p.coverImage && <img src={p.coverImage} className="absolute inset-0 w-full h-full object-cover opacity-40" alt=""/>}
+                  {p.coverImage && <img src={getImageUrl(p.coverImage)} className="absolute inset-0 w-full h-full object-cover opacity-40" alt=""/>}
                   <div className="relative z-10">
                     <Badge variant={st.variant} size="sm">{st.label}</Badge>
                     <h3 className="text-white font-bold text-lg mt-1 leading-tight">{p.name}</h3>
@@ -221,7 +222,7 @@ export default function PackagesPage() {
                   <div className="flex gap-4 items-center">
                     {form.coverImage ? (
                       <div className="relative w-32 h-20 rounded-lg overflow-hidden border border-gray-300">
-                        <img src={form.coverImage} className="w-full h-full object-cover" alt="Cover" />
+                        <img src={getImageUrl(form.coverImage)} className="w-full h-full object-cover" alt="Cover" />
                         <button onClick={() => setForm({...form, coverImage: ''})} className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 shadow hover:bg-red-600"><X size={12}/></button>
                       </div>
                     ) : (
