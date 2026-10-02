@@ -1,58 +1,42 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3';
+import { mkdir, writeFile } from 'node:fs/promises';
+import path from 'node:path';
 import { v4 as uuidv4 } from 'uuid';
 
-// Pastikan variabel environment tersedia
-const R2_ACCESS_KEY_ID = process.env.R2_ACCESS_KEY_ID || '';
-const R2_SECRET_ACCESS_KEY = process.env.R2_SECRET_ACCESS_KEY || '';
-const R2_ENDPOINT = process.env.R2_ENDPOINT || '';
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL || '';
-const R2_BUCKET_NAME = process.env.R2_BUCKET_NAME || '';
-
-export const s3Client = new S3Client({
-  region: 'auto', // R2 requires 'auto'
-  endpoint: R2_ENDPOINT,
-  credentials: {
-    accessKeyId: R2_ACCESS_KEY_ID,
-    secretAccessKey: R2_SECRET_ACCESS_KEY,
-  },
-});
+// Penyimpanan file di disk server sendiri (pengganti Cloudflare R2).
+// Nama fungsi `uploadFileToR2` sengaja dipertahankan agar pemanggil lama
+// tidak perlu diubah. File disajikan oleh route `/files/[...path]`.
+const FILES_DIR = process.env.FILES_DIR || path.join(process.cwd(), 'storage', 'files');
+const FILES_PUBLIC_URL = (process.env.FILES_PUBLIC_URL || '/files').replace(/\/$/, '');
 
 /**
- * Mengunggah buffer file ke Cloudflare R2 dan mengembalikan Public URL.
- * 
- * @param fileBuffer Buffer file yang akan diunggah
+ * Menyimpan buffer file ke disk dan mengembalikan URL publiknya.
+ *
+ * @param fileBuffer Buffer file yang akan disimpan
  * @param fileName Nama file asli (akan ditambahkan UUID agar unik)
- * @param mimeType Tipe MIME dari file (misal: 'image/jpeg', 'application/pdf')
- * @param folder Folder penyimpanan di R2 (default: 'uploads')
- * @returns Public URL file yang berhasil diunggah
+ * @param mimeType Tipe MIME dari file (tidak dipakai untuk disk, dipertahankan untuk kompatibilitas)
+ * @param folder Folder penyimpanan (default: 'uploads')
+ * @returns URL publik file yang berhasil disimpan
  */
 export async function uploadFileToR2(
   fileBuffer: Buffer,
   fileName: string,
-  mimeType: string,
+  _mimeType: string,
   folder: string = 'uploads'
 ): Promise<string> {
   try {
-    // Generate nama file yang unik untuk menghindari bentrok
-    const fileExtension = fileName.split('.').pop() || '';
+    const safeFolder = folder.replace(/[^a-zA-Z0-9_-]/g, '_') || 'uploads';
     const safeFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
-    const uniqueFileName = `${folder}/${uuidv4()}-${safeFileName}`;
+    const key = `${safeFolder}/${uuidv4()}-${safeFileName}`;
 
-    const command = new PutObjectCommand({
-      Bucket: R2_BUCKET_NAME,
-      Key: uniqueFileName,
-      Body: fileBuffer,
-      ContentType: mimeType,
-    });
+    const target = path.join(FILES_DIR, key);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, fileBuffer, { mode: 0o640 });
 
-    await s3Client.send(command);
-
-    // Menghasilkan public URL
-    const publicUrl = `${R2_PUBLIC_URL}/${uniqueFileName}`;
-    console.log(`✅ File berhasil diunggah ke R2: ${publicUrl}`);
+    const publicUrl = `${FILES_PUBLIC_URL}/${key}`;
+    console.log(`✅ File berhasil disimpan: ${publicUrl}`);
     return publicUrl;
   } catch (error) {
-    console.error('❌ Gagal mengunggah file ke R2:', error);
-    throw new Error('Gagal mengunggah file ke R2. Periksa kredensial dan konfigurasi bucket.');
+    console.error('❌ Gagal menyimpan file:', error);
+    throw new Error('Gagal menyimpan file. Periksa FILES_DIR dan izin folder.');
   }
 }

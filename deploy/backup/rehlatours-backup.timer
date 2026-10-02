@@ -1,0 +1,11 @@
+[Unit]
+Description=Run the ERP Rehla backup every day at 01:30 WIB
+
+[Timer]
+# Server clock is UTC: 18:30 UTC = 01:30 WIB.
+OnCalendar=*-*-* 18:30:00 UTC
+RandomizedDelaySec=5min
+Persistent=true
+
+[Install]
+WantedBy=timers.target

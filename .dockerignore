@@ -1,0 +1,14 @@
+.git
+.next
+node_modules
+.env
+.env.*
+!.env.example
+dev.db
+storage
+Official-Website-Rehlatours.id
+app/generated
+test*.js
+test*.ts
+*.tsbuildinfo
+.DS_Store

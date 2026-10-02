@@ -1,0 +1,93 @@
+name: rehlatours-erp-legacy
+
+# Self-hosted ERP Rehla on the shared VPS. Runs ONLY in the rootless Docker
+# daemon of user `deploy` (DOCKER_HOST=unix:///run/user/1001/docker.sock).
+#
+#   ERP listens on 127.0.0.1:9300 only; Nginx proxies erp.rehlatours.id to it.
+#   PostgreSQL has no host port and lives on an internal network.
+#   Uploaded files live in the named volume mounted at /data/files.
+#
+# Run from the repository root:
+#   ERP_ENV_FILE=/home/deploy/rehlatours/shared/env/legacy-erp.env \
+#   docker compose --env-file "$ERP_ENV_FILE" -f deploy/compose.vps.yml up -d --build
+services:
+  erp:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    env_file:
+      - ${ERP_ENV_FILE:?Set ERP_ENV_FILE to the legacy ERP environment file}
+    environment:
+      FILES_DIR: /data/files
+    ports:
+      - '127.0.0.1:9300:3000'
+    volumes:
+      - erp_files:/data/files
+    depends_on:
+      postgres:
+        condition: service_healthy
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    cpus: 1.0
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - >-
+          node -e "fetch('http://127.0.0.1:3000/login').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+      interval: 30s
+      timeout: 8s
+      retries: 4
+      start_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: '5'
+    networks:
+      default: {}
+      private: {}
+
+  postgres:
+    image: postgres:17.6-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?Set POSTGRES_DB in the legacy ERP environment file}
+      POSTGRES_USER: ${POSTGRES_USER:?Set POSTGRES_USER in the legacy ERP environment file}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the legacy ERP environment file}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - erp_postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    restart: unless-stopped
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U "$$POSTGRES_USER" -d "$$POSTGRES_DB"
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    logging:
+      driver: json-file
+      options:
+        max-size: 20m
+        max-file: '5'
+    networks:
+      - private
+
+networks:
+  private:
+    name: rehlatours-erp-legacy-private
+    internal: true
+
+volumes:
+  erp_postgres:
+    name: rehlatours-erp-legacy-postgres
+  erp_files:
+    name: rehlatours-erp-legacy-files

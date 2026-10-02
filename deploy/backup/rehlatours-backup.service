@@ -1,0 +1,11 @@
+[Unit]
+Description=ERP Rehla daily backup to encrypted Google Drive
+
+[Service]
+Type=oneshot
+Environment=DOCKER_HOST=unix:///run/user/%U/docker.sock
+ExecStart=/home/deploy/rehlatours/shared/backup/backup.sh
+# Stay out of the way of the other projects on this server.
+Nice=10
+IOSchedulingClass=idle
+TimeoutStartSec=2h
